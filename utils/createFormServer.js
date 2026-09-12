@@ -1022,7 +1022,7 @@ else {
     const safeTitle = escapeHtml(title);
     const safeMessage = escapeHtml(message);
     const safeStatusLabel = escapeHtml(statusLabel || 'Verification');
-    const homeBase = String(config.EXAM_WEB_BASE_URL || 'https://legobeerus.github.io').trim().replace(/\/+$/, '');
+    const homeBase = String(config.EXAM_WEB_BASE_URL || 'https://animatedgreatt.github.io').trim().replace(/\/+$/, '');
     const homeUrl = `${homeBase}/index.html`;
 
     return `<!doctype html>
