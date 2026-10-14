@@ -36,12 +36,18 @@ for (const [n, idxs] of Object.entries(nameMap)) {
 }
 
 const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
+const applicationId = process.env.APPLICATION_ID || process.env.DISCORD_APPLICATION_ID || process.env.CLIENT_ID;
+
+if (!applicationId) {
+  console.error('Missing Discord application ID. Set APPLICATION_ID or DISCORD_APPLICATION_ID before deploying commands.');
+  process.exit(1);
+}
 
 (async () => {
   try {
     console.log("Registering slash commands... :3");
     await rest.put(
-      Routes.applicationCommands("1433761317038198874"),
+      Routes.applicationCommands(applicationId),
       { body: commands }
     );
     console.log("Commands registered.");

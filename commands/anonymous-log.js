@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
+const config = require('../config');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -45,13 +46,18 @@ module.exports = {
         )
     ),
 
-  guildOnly: "1041577710067138560",
+  guildOnly: config.GUILD_ID || undefined,
 
   async execute(interaction) {
     await interaction.deferReply({ ephemeral: true });
 
     try {
-      const channel = await interaction.guild.channels.fetch("1449830431171149885");
+      const targetChannelId = config.ANONYMOUS_LOG_CHANNEL_ID || config.LOG_CHANNEL_ID || interaction.channelId;
+      const channel = await interaction.guild.channels.fetch(targetChannelId).catch(() => null);
+      if (!channel) {
+        await interaction.editReply({ content: '❌ The anonymous log channel is not configured for this server. Set ANONYMOUS_LOG_CHANNEL_ID or LOG_CHANNEL_ID in the environment.', ephemeral: true });
+        return;
+      }
       const sub = interaction.options.getSubcommand();
 
       if (sub === "case") {

@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
+const config = require('../config');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -34,7 +35,7 @@ module.exports = {
                 .setRequired(true),
         ),
 
-        guildOnly: "1041577710067138560",
+        guildOnly: config.GUILD_ID || undefined,
 
     // gets the inputs in the command
     async execute(interaction) {

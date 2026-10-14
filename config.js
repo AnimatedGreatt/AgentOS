@@ -4,12 +4,17 @@ function cleanId(v) {
 }
 
 module.exports = {
+  // Staging-safe application identity and guild targeting
+  APPLICATION_ID: cleanId(process.env.APPLICATION_ID) || cleanId(process.env.DISCORD_APPLICATION_ID) || undefined,
+  GUILD_ID: cleanId(process.env.GUILD_ID) || undefined,
   // Role allowed to approve cases
   REQUIRED_ROLE_ID: cleanId(process.env.REQUIRED_ROLE_ID) || "1449861438012133566,1106739929540730921",
   // Channel where approved cases are posted
   TARGET_CHANNEL_ID: cleanId(process.env.TARGET_CHANNEL_ID) || "1449832209316839455",
   // Role to ping when posting approved cases
   PING_ROLE_ID: cleanId(process.env.PING_ROLE_ID) || "1041577710067138561",
+  // Channel for anonymous log submissions; defaults to a production channel but can be overridden for staging.
+  ANONYMOUS_LOG_CHANNEL_ID: cleanId(process.env.ANONYMOUS_LOG_CHANNEL_ID) || "1449830431171149885",
   // Role to ping when a scheduled follow-up fires (dedicated; optional)
   FOLLOWUP_PING_ROLE_ID: cleanId(process.env.FOLLOWUP_PING_ROLE_ID) || "1449861438012133566",
 
