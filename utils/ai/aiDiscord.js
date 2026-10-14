@@ -125,12 +125,26 @@ function describeMessage(msg, client, maxChars) {
     text = [e.title, e.description].filter(Boolean).join(' — ');
   }
   if (!text) return null;
+  // One line per message, so the model can tell where each message starts.
+  text = text.replace(/\s*\n+\s*/g, ' ↵ ');
   const limit = isBot ? BOT_MESSAGE_CHARS : maxChars;
   if (text.length > limit) text = `${text.slice(0, limit)}…`;
-  const name = isBot
-    ? 'AgentOS (you)'
-    : (msg.member && msg.member.displayName) || msg.author.globalName || msg.author.username;
+  let name;
+  if (isBot) {
+    // Slash command replies don't show who asked unless we say so.
+    const meta = msg.interactionMetadata;
+    name = meta && meta.user
+      ? `AgentOS (you), answering ${displayNameOf(msg.guild, meta.user)}'s /ask`
+      : 'AgentOS (you)';
+  } else {
+    name = (msg.member && msg.member.displayName) || msg.author.globalName || msg.author.username;
+  }
   return `${name}: ${text}`;
+}
+
+function displayNameOf(guild, user) {
+  const member = guild && guild.members.cache.get(user.id);
+  return (member && member.displayName) || user.globalName || user.username;
 }
 
 /**
