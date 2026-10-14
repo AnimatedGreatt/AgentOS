@@ -13,6 +13,8 @@ const { handleTimeWebhookMessage } = require("./utils/timeWebhookHandler");
 const { startSuspensionScheduler } = require("./utils/trelloSuspensionScheduler");
 const { createFormServer } = require("./utils/createFormServer");
 const { initXpWatcherDiagnostics, handleXpAuditLogMessage } = require("./utils/xpWatcher");
+const { startKnowledgeSync } = require("./utils/ai/knowledgeBase");
+const { handleAiMention } = require("./utils/ai/aiDiscord");
 
 const client = new Client({
   intents: [
@@ -40,6 +42,27 @@ function buildAosWebUrlForUsername(username) {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
   const safeUsername = encodeURIComponent(String(username || '').trim());
   return `${base}${normalizedPath}?username=${safeUsername}`;
+}
+
+// Replaces the Username/Charges/jail lines in an AoS starter post (format from buildAosBody in commands/aos.js).
+// Values are collapsed to one line because the forum parsers read each field from a single line.
+function applyAosEditsToStarterContent(content, { username, charges, jailMinutes }) {
+  const oneLine = (value) => String(value).split(/\r?\n/).map(s => s.trim()).filter(Boolean).join(', ');
+  let next = String(content || '');
+  if (username) {
+    next = next.replace(/^(\*\*Username:\*\*).*$/m, (_, label) => `${label} ${oneLine(username)}`);
+    const webViewUrl = buildAosWebUrlForUsername(username);
+    if (webViewUrl) {
+      next = next.replace(/\[\*\*View in browser\*\*\]\([^)]*\)/, () => `[**View in browser**](${webViewUrl})`);
+    }
+  }
+  if (charges) {
+    next = next.replace(/^(\*\*Charges:\*\*).*$/m, (_, label) => `${label} ${oneLine(charges)}`);
+  }
+  if (Number.isFinite(jailMinutes) && jailMinutes >= 0) {
+    next = next.replace(/Jail\s*time\s*has\s*been\s*set\s*to\s*\d+\s*minutes?/i, `Jail time has been set to ${Math.round(jailMinutes)} minutes`);
+  }
+  return next.slice(0, 2000);
 }
 
 // Start DB keep-alive (if configured)
@@ -149,6 +172,28 @@ client.once("ready", () => {
       const thread = await client.channels.fetch(threadId).catch(() => null);
       if (!thread || typeof thread.send !== 'function') return;
 
+      // Rewrite the original post so it reflects the edit (only possible when the bot authored it).
+      try {
+        const starter = typeof thread.fetchStarterMessage === 'function'
+          ? await thread.fetchStarterMessage().catch(() => null)
+          : null;
+        if (starter && starter.author && starter.author.id === client.user.id) {
+          const updatedContent = applyAosEditsToStarterContent(starter.content, {
+            username: usernameChanged ? username : null,
+            charges: chargesChanged ? newCharges : null,
+            jailMinutes: jailChanged ? newJailMinutes : null
+          });
+          if (updatedContent !== starter.content) {
+            await starter.edit({ content: updatedContent });
+          }
+        }
+        if (usernameChanged && username && /^AOS\s*-/i.test(String(thread.name || ''))) {
+          await thread.setName(`AOS - ${username}`.slice(0, 100));
+        }
+      } catch (e) {
+        console.warn('AoS update: failed to edit starter message/thread name:', e?.message || e);
+      }
+
       const content = webViewUrl
         ? `⚠️ This AoS has been updated (${changedFields}), view changes on [the dashboard](${webViewUrl})`
         : `⚠️ This AoS has been updated (${changedFields})`;
@@ -162,6 +207,8 @@ client.once("ready", () => {
   try { verifyReminderScheduler.initScheduler(client); } catch (e) { console.error('Failed to init verifyReminderScheduler:', e); }
   // Start events scheduler and weekly maintenance ticks
   try { startEventScheduler(client); } catch (e) { console.error('Failed to init eventScheduler:', e); }
+  // Load and periodically refresh the AI assistant's knowledge (Docs, Trello, wiki)
+  try { startKnowledgeSync(); } catch (e) { console.error('Failed to start AI knowledge sync:', e); }
 });
 
 // Guild member join/leave hooks for verification reminders
@@ -183,6 +230,8 @@ client.on("messageCreate", async message => {
   try { await handleExamDM(message, client); } catch (e) { /* continue to other handlers */ }
   try { await handleXpAuditLogMessage(message, client); } catch (e) { console.error('XP watcher failed:', e); }
   await handleMessageCommands(message, client);
+  // Not awaited: answering takes a few seconds and shouldn't delay the handlers below.
+  handleAiMention(message, client).catch(e => console.error('AI mention handler failed:', e));
   await handleTrelloIngest(message);
   await handleTimeWebhookMessage(message);
 });

@@ -136,7 +136,9 @@ async function handleMessageCommands(message, client) {
         { name: '!changelog', auth: 'Public' },
         { name: '!errorindex', auth: 'Public' },
         { name: '!events-setup', auth: 'Role-gated' },
+        { name: '@AgentOS <question> / /ask', auth: 'Public (AI assistant). Add --ai to mention the bot without an AI reply.' },
         { name: '!admin', auth: adminLabel },
+        { name: '!ai', auth: adminLabel },
         { name: '!agentoslog', auth: adminLabel },
         { name: '!roleid', auth: adminLabel },
         { name: '!verifylist', auth: adminLabel }

@@ -36,12 +36,8 @@ for (const [n, idxs] of Object.entries(nameMap)) {
 }
 
 const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
-const applicationId = process.env.APPLICATION_ID || process.env.DISCORD_APPLICATION_ID || process.env.CLIENT_ID;
-
-if (!applicationId) {
-  console.error('Missing Discord application ID. Set APPLICATION_ID or DISCORD_APPLICATION_ID before deploying commands.');
-  process.exit(1);
-}
+// Staging sets APPLICATION_ID; production falls back to the main bot's application.
+const applicationId = process.env.APPLICATION_ID || process.env.DISCORD_APPLICATION_ID || process.env.CLIENT_ID || "1433761317038198874";
 
 (async () => {
   try {

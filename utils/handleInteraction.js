@@ -15,6 +15,7 @@ const { getState, setState } = require('./adminState');
 const pausedCommands = require('./pausedCommands');
 const arrestStore = require('./arrestStore');
 const eventSystem = require('./eventSystem');
+const { handleAiFeedbackButton, handleAiFeedbackModal } = require('./ai/aiDiscord');
 
 /**
  * Main interaction handler that routes to appropriate handlers
@@ -31,6 +32,11 @@ async function handleInteraction(interaction, client) {
 
     // Handle button interactions
     if (interaction.isButton()) {
+      if (typeof interaction.customId === 'string' && interaction.customId.startsWith('ai_fb:')) {
+        await handleAiFeedbackButton(interaction);
+        return;
+      }
+
       if (typeof interaction.customId === 'string' && interaction.customId.startsWith('event_preset:')) {
         await eventSystem.handlePresetButton(interaction, client);
         return;
@@ -443,6 +449,11 @@ async function handleInteraction(interaction, client) {
 
     // Handle modal submissions
     if (interaction.isModalSubmit()) {
+      if (interaction.customId.startsWith('ai_fb_modal:')) {
+        await handleAiFeedbackModal(interaction);
+        return;
+      }
+
       if (interaction.customId.startsWith('event_preset_modal:')) {
         await eventSystem.handlePresetModal(interaction, client);
         return;

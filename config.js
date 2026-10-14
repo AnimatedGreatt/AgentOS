@@ -6,7 +6,8 @@ function cleanId(v) {
 module.exports = {
   // Staging-safe application identity and guild targeting
   APPLICATION_ID: cleanId(process.env.APPLICATION_ID) || cleanId(process.env.DISCORD_APPLICATION_ID) || undefined,
-  GUILD_ID: cleanId(process.env.GUILD_ID) || undefined,
+  // Defaults to the OSI server so guild-locked commands (/submit, /anonymous-log) stay locked in production.
+  GUILD_ID: cleanId(process.env.GUILD_ID) || "1041577710067138560",
   // Role allowed to approve cases
   REQUIRED_ROLE_ID: cleanId(process.env.REQUIRED_ROLE_ID) || "1449861438012133566,1106739929540730921",
   // Channel where approved cases are posted
@@ -260,6 +261,20 @@ module.exports = {
   // TTL for cached AoS entry lookups used by XP watcher (milliseconds)
   XP_AOS_CACHE_TTL_MS: process.env.XP_AOS_CACHE_TTL_MS !== undefined ? Number(process.env.XP_AOS_CACHE_TTL_MS) : 60000,
 
+  // AI assistant (/ask and @mentions). Requires ANTHROPIC_API_KEY.
+  // Comma-separated guild IDs where the assistant may answer (the knowledge base contains restricted OSI documents).
+  AI_GUILD_IDS: process.env.AI_GUILD_IDS || "1041577710067138560",
+  AI_MODEL: process.env.AI_MODEL || "claude-haiku-5-5",
+  // Channel that receives "wrong answer" reports. Falls back to LOG_CHANNEL_ID.
+  AI_FEEDBACK_CHANNEL_ID: cleanId(process.env.AI_FEEDBACK_CHANNEL_ID) || cleanId(process.env.LOG_CHANNEL_ID) || "1467682055298089131",
+  AI_USER_COOLDOWN_SECONDS: process.env.AI_USER_COOLDOWN_SECONDS !== undefined ? Number(process.env.AI_USER_COOLDOWN_SECONDS) : 10,
+  AI_USER_DAILY_LIMIT: process.env.AI_USER_DAILY_LIMIT !== undefined ? Number(process.env.AI_USER_DAILY_LIMIT) : 40,
+  AI_SYNC_INTERVAL_MINUTES: process.env.AI_SYNC_INTERVAL_MINUTES !== undefined ? Number(process.env.AI_SYNC_INTERVAL_MINUTES) : 30,
+  // Knowledge sources. Google Docs must be shared with the service account (GOOGLE_SERVICE_ACCOUNT_JSON).
+  AI_GOOGLE_DOC_IDS: process.env.AI_GOOGLE_DOC_IDS || "1pEVCUjvF9H6_WGfmgDV_I26rJWs-Tm40pyzqcNoK-8c,14CeLsAweWJOPIiwuOUHkg6jGARASySdPM2AFwyeQWKw,1YOBnhqZcKJ4xfvZl6k0h6OSYsBCaoTvTKYYboJRW24c,1PY4uWklus06TWDyuHYkhJxAVLP-s1wI4XXZqwGgt5IU",
+  AI_TRELLO_BOARD_IDS: process.env.AI_TRELLO_BOARD_IDS || "GoXodhwD,IxtcpAoK",
+  AI_WIKI_BASE_URL: process.env.AI_WIKI_BASE_URL || "https://sgcommand.wikidot.com",
+
   // Service account credentials for private sheets. Provide the full JSON
   // as a string in `GOOGLE_SERVICE_ACCOUNT_JSON` (preferred) or a filesystem
   // path in `GOOGLE_SERVICE_ACCOUNT_PATH` (legacy).
@@ -280,6 +295,9 @@ module.exports = {
 // Admin whitelist: comma-separated user IDs in env var ADMIN_WHITELIST
 // Example: ADMIN_WHITELIST=123,456,789
 module.exports.ADMIN_WHITELIST = (process.env.ADMIN_WHITELIST || "716248402513494027").split(",").map(s => cleanId(s)).map(s => s.trim()).filter(Boolean);
+module.exports.AI_GUILD_IDS_LIST = String(module.exports.AI_GUILD_IDS || "").split(",").map(s => cleanId(s)).map(s => s.trim()).filter(Boolean);
+module.exports.AI_GOOGLE_DOC_IDS_LIST = String(module.exports.AI_GOOGLE_DOC_IDS || "").split(",").map(s => s.trim()).filter(Boolean);
+module.exports.AI_TRELLO_BOARD_IDS_LIST = String(module.exports.AI_TRELLO_BOARD_IDS || "").split(",").map(s => s.trim()).filter(Boolean);
 const _rawRequiredRoles = process.env.REQUIRED_ROLE_ID || module.exports.REQUIRED_ROLE_ID || "";
 module.exports.REQUIRED_ROLE_IDS_LIST = String(_rawRequiredRoles).split(",").map(s => cleanId(s)).map(s => s.trim()).filter(Boolean);
 // Processed list of role IDs to exclude from verifylist (from VERIFYLIST_EXCLUDE_ROLE_IDS)

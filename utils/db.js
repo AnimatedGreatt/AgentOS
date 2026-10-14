@@ -170,23 +170,83 @@ async function listenForAosFieldUpdates(handler) {
     return () => {};
   }
 
-  const client = await pool.connect();
-  client.on('error', (err) => console.error('Postgres AoS listener client error:', err));
-  client.on('notification', async (msg) => {
-    if (!msg || msg.channel !== 'aos_field_updates') return;
-    try {
-      await handler(msg.payload || '');
-    } catch (e) {
-      console.error('Error handling aos_field_updates payload:', e);
-    }
-  });
+  // The LISTEN connection is long-lived; if it drops (DB restart, idle timeout, network blip)
+  // notifications are silently lost, so reconnect on error and health-check it periodically.
+  const healthCheckMs = 60 * 1000;
+  let client = null;
+  let stopped = false;
+  let reconnectTimer = null;
+  let healthTimer = null;
+  let retryDelayMs = 1000;
 
-  await client.query('LISTEN aos_field_updates');
-  console.info('Listening for Postgres NOTIFY on channel: aos_field_updates');
+  function dropClient(err) {
+    if (!client) return;
+    const dead = client;
+    client = null;
+    dead.removeAllListeners('notification');
+    try { dead.release(err || true); } catch (e) { /* already released */ }
+  }
+
+  function scheduleReconnect(err) {
+    dropClient(err);
+    if (stopped || reconnectTimer) return;
+    console.warn(`AoS listener disconnected; reconnecting in ${retryDelayMs}ms`);
+    reconnectTimer = setTimeout(() => {
+      reconnectTimer = null;
+      connect().catch(() => null);
+    }, retryDelayMs);
+    retryDelayMs = Math.min(retryDelayMs * 2, 60 * 1000);
+  }
+
+  async function connect() {
+    if (stopped) return;
+    let next = null;
+    try {
+      next = await pool.connect();
+      next.on('error', (err) => {
+        console.error('Postgres AoS listener client error:', err && err.message ? err.message : err);
+        if (client === next) scheduleReconnect(err);
+      });
+      next.on('notification', async (msg) => {
+        if (!msg || msg.channel !== 'aos_field_updates') return;
+        try {
+          await handler(msg.payload || '');
+        } catch (e) {
+          console.error('Error handling aos_field_updates payload:', e);
+        }
+      });
+      await next.query('LISTEN aos_field_updates');
+      client = next;
+      retryDelayMs = 1000;
+      console.info('Listening for Postgres NOTIFY on channel: aos_field_updates');
+    } catch (err) {
+      console.error('Failed to LISTEN on aos_field_updates:', err && err.message ? err.message : err);
+      if (next) { try { next.release(err); } catch (e) { /* ignore */ } }
+      scheduleReconnect(err);
+      throw err;
+    }
+  }
+
+  // A failed first attempt has already scheduled a retry, so keep the health check running regardless.
+  await connect().catch(() => null);
+
+  healthTimer = setInterval(() => {
+    if (!client) return;
+    const current = client;
+    current.query('SELECT 1').catch((err) => {
+      if (client === current) scheduleReconnect(err);
+    });
+  }, healthCheckMs);
 
   return () => {
-    client.query('UNLISTEN aos_field_updates').catch(() => null);
-    client.release();
+    stopped = true;
+    if (healthTimer) clearInterval(healthTimer);
+    if (reconnectTimer) clearTimeout(reconnectTimer);
+    if (client) {
+      const current = client;
+      client = null;
+      current.query('UNLISTEN aos_field_updates').catch(() => null).finally(() => current.release());
+    }
   };
 }
 
