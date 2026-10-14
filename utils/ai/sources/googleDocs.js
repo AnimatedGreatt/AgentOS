@@ -121,7 +121,8 @@ async function tabToText(tab, docTitle, auth) {
 }
 
 /**
- * @returns {Promise<Array<{ key, title, updated, text, url }>>}
+ * Fetches each configured doc independently so one failure doesn't affect the others.
+ * @returns {Promise<Array<{ key, title, updated, text, url } | { key, error }>>}
  */
 async function fetchGoogleDocs() {
   if (!config.GOOGLE_SERVICE_ACCOUNT_JSON && !config.GOOGLE_SERVICE_ACCOUNT_PATH) {
@@ -137,33 +138,41 @@ async function fetchGoogleDocs() {
 
   const results = [];
   for (const id of config.AI_GOOGLE_DOC_IDS_LIST) {
-    const res = await docs.documents.get({ documentId: id, includeTabsContent: true });
-    const title = String(res.data.title || id).replace(/^\[OSI\]\s*/, '').trim();
-
-    let updated = null;
     try {
-      const meta = await drive.files.get({ fileId: id, fields: 'modifiedTime', supportsAllDrives: true });
-      updated = meta.data.modifiedTime ? meta.data.modifiedTime.slice(0, 10) : null;
+      results.push(await fetchDoc(id, docs, drive, auth));
     } catch (e) {
-      // modifiedTime is informational only
+      results.push({ key: `doc:${id}`, error: e.message || String(e) });
     }
-
-    const sections = [];
-    for (const { tab, depth } of flattenTabs(res.data.tabs)) {
-      const body = await tabToText(tab, title, auth);
-      if (!body) continue;
-      sections.push(`${'#'.repeat(Math.min(depth + 2, 4))} Tab: ${tab.tabProperties.title}\n\n${body}`);
-    }
-
-    results.push({
-      key: `doc:${id}`,
-      title,
-      updated,
-      url: `https://docs.google.com/document/d/${id}`,
-      text: sections.join('\n\n')
-    });
   }
   return results;
+}
+
+async function fetchDoc(id, docs, drive, auth) {
+  const res = await docs.documents.get({ documentId: id, includeTabsContent: true });
+  const title = String(res.data.title || id).replace(/^\[OSI\]\s*/, '').trim();
+
+  let updated = null;
+  try {
+    const meta = await drive.files.get({ fileId: id, fields: 'modifiedTime', supportsAllDrives: true });
+    updated = meta.data.modifiedTime ? meta.data.modifiedTime.slice(0, 10) : null;
+  } catch (e) {
+    // modifiedTime is informational only
+  }
+
+  const sections = [];
+  for (const { tab, depth } of flattenTabs(res.data.tabs)) {
+    const body = await tabToText(tab, title, auth);
+    if (!body) continue;
+    sections.push(`${'#'.repeat(Math.min(depth + 2, 4))} Tab: ${tab.tabProperties.title}\n\n${body}`);
+  }
+
+  return {
+    key: `doc:${id}`,
+    title,
+    updated,
+    url: `https://docs.google.com/document/d/${id}`,
+    text: sections.join('\n\n')
+  };
 }
 
 module.exports = { fetchGoogleDocs };

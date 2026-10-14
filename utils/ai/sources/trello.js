@@ -88,9 +88,16 @@ async function fetchBoard(boardId) {
   };
 }
 
+// Fetches each board independently so one failure doesn't affect the others.
 async function fetchTrelloBoards() {
   const results = [];
-  for (const id of config.AI_TRELLO_BOARD_IDS_LIST) results.push(await fetchBoard(id));
+  for (const id of config.AI_TRELLO_BOARD_IDS_LIST) {
+    try {
+      results.push(await fetchBoard(id));
+    } catch (e) {
+      results.push({ key: `trello:${id}`, error: e.message || String(e) });
+    }
+  }
   return results;
 }
 

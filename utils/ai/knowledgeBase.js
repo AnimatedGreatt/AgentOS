@@ -9,16 +9,22 @@ const { syncWiki, renderWikiDocs, pageKey } = require('./sources/wiki');
 //
 // The rendered text goes into the cached part of the prompt, so it must be
 // byte-identical between rebuilds unless a source actually changed (no
-// timestamps of when we synced, stable ordering). A failing source keeps its
-// previous content rather than disappearing from the knowledge base.
+// timestamps of when we synced, stable ordering).
+//
+// Every doc/board keeps its last good copy: a fetch that fails or comes back
+// (nearly) empty never replaces it. Last good copies are persisted to the
+// database so a restart during a Google/Trello/wiki outage still starts with
+// full knowledge.
 
 const WIKI_FULL_CRAWL_MS = 24 * 60 * 60 * 1000;
 // Haiku pricing steps up above 100K prompt tokens; warn well before that.
 const TOKEN_WARN_THRESHOLD = 90_000;
+// A doc/board shorter than this is treated as a failed fetch, not as real content.
+const MIN_SOURCE_CHARS = 200;
 
 const state = {
-  docs: [],
-  trello: [],
+  docs: new Map(),
+  trello: new Map(),
   wikiPages: new Map(),
   wikiEditDates: {},
   wikiExcluded: new Set(),
@@ -42,12 +48,55 @@ function renderSource(kind, doc) {
   return `<source ${attrs.join(' ')}>\n${doc.text}\n</source>`;
 }
 
+function docKeys() {
+  return config.AI_GOOGLE_DOC_IDS_LIST.map(id => `doc:${id}`);
+}
+
+function boardKeys() {
+  return config.AI_TRELLO_BOARD_IDS_LIST.map(id => `trello:${id}`);
+}
+
+// Loaded docs/boards in configured order.
+function loaded(map, keys) {
+  return keys.map(k => map.get(k)).filter(Boolean);
+}
+
+/**
+ * Merges fresh fetch results into `map`, keeping the previous copy for any
+ * item that failed or came back too short. Returns error strings for status.
+ */
+function mergeSources(map, results) {
+  const errors = [];
+  for (const r of results) {
+    const prev = map.get(r.key);
+    const label = (prev && prev.title) || r.title || r.key;
+    if (r.error) {
+      errors.push(`${label}: ${r.error}${prev ? ' (previous copy kept)' : ''}`);
+      continue;
+    }
+    if (String(r.text || '').trim().length < MIN_SOURCE_CHARS) {
+      errors.push(`${label}: came back empty${prev ? ' (previous copy kept)' : ''}`);
+      continue;
+    }
+    if (!prev || prev.text !== r.text || prev.title !== r.title || prev.updated !== r.updated) {
+      aiStore.cacheSet(`source:${r.key}`, r).catch(e => console.warn('AI knowledge: could not persist source:', e.message || e));
+    }
+    map.set(r.key, r);
+  }
+  return errors;
+}
+
 function render() {
+  const docs = loaded(state.docs, docKeys());
+  const boards = loaded(state.trello, boardKeys());
+  // Without the guidelines or Trello the assistant would answer from the wiki alone; better not to answer.
+  if (docs.length === 0 && boards.length === 0) return { text: '', wikiCount: 0 };
+
   const wikiDocs = renderWikiDocs(state.wikiPages, state.wikiEditDates, state.wikiExcluded);
   const parts = [];
   parts.push('<authoritative_sources>');
-  for (const d of state.docs) parts.push(renderSource('guideline_document', d));
-  for (const d of state.trello) parts.push(renderSource('trello_board', d));
+  for (const d of docs) parts.push(renderSource('guideline_document', d));
+  for (const d of boards) parts.push(renderSource('trello_board', d));
   parts.push('</authoritative_sources>');
   parts.push('<background_sources>');
   for (const d of wikiDocs) parts.push(renderSource('wiki_page', d));
@@ -76,8 +125,27 @@ async function loadPersisted() {
     if (dates && typeof dates === 'object') state.wikiEditDates = dates;
     const excluded = await aiStore.cacheGet('wiki_excluded');
     if (Array.isArray(excluded)) state.wikiExcluded = new Set(excluded);
+    for (const key of [...docKeys(), ...boardKeys()]) {
+      const saved = await aiStore.cacheGet(`source:${key}`);
+      if (saved && typeof saved.text === 'string' && saved.text.trim().length >= MIN_SOURCE_CHARS) {
+        (key.startsWith('doc:') ? state.docs : state.trello).set(key, saved);
+      }
+    }
+    const wiki = await aiStore.cacheGet('wiki_pages');
+    if (Array.isArray(wiki)) state.wikiPages = new Map(wiki);
   } catch (e) {
     console.warn('AI knowledge: could not load persisted state:', e.message || e);
+  }
+  // Serve the last known copy right away; the sync that follows refreshes it.
+  if (await rebuild()) console.info('AI knowledge: started from saved copy while syncing');
+}
+
+function setErrors(key, errors) {
+  if (errors.length) {
+    state.errors[key] = errors.join('; ');
+    console.error(`AI knowledge: ${key} sync problems: ${state.errors[key]}`);
+  } else {
+    delete state.errors[key];
   }
 }
 
@@ -85,19 +153,15 @@ async function runSync({ forceFullWiki = false } = {}) {
   const startedAt = new Date();
 
   try {
-    state.docs = await fetchGoogleDocs();
-    delete state.errors.docs;
+    setErrors('docs', mergeSources(state.docs, await fetchGoogleDocs()));
   } catch (e) {
-    state.errors.docs = e.message || String(e);
-    console.error('AI knowledge: Google Docs sync failed:', e.message || e);
+    setErrors('docs', [`${e.message || e}${state.docs.size ? ' (previous copies kept)' : ''}`]);
   }
 
   try {
-    state.trello = await fetchTrelloBoards();
-    delete state.errors.trello;
+    setErrors('trello', mergeSources(state.trello, await fetchTrelloBoards()));
   } catch (e) {
-    state.errors.trello = e.message || String(e);
-    console.error('AI knowledge: Trello sync failed:', e.message || e);
+    setErrors('trello', [`${e.message || e}${state.trello.size ? ' (previous copies kept)' : ''}`]);
   }
 
   try {
@@ -109,15 +173,16 @@ async function runSync({ forceFullWiki = false } = {}) {
       excluded: state.wikiExcluded,
       editDates: state.wikiEditDates
     });
+    const changed = JSON.stringify(Array.from(res.pages)) !== JSON.stringify(Array.from(state.wikiPages));
     state.wikiPages = res.pages;
     state.wikiEditDates = res.editDates;
     state.wikiLastSync = startedAt.toISOString();
     if (full) state.wikiLastFullCrawl = Date.now();
     aiStore.cacheSet('wiki_edit_dates', state.wikiEditDates).catch(() => {});
+    if (changed) aiStore.cacheSet('wiki_pages', Array.from(state.wikiPages)).catch(() => {});
     delete state.errors.wiki;
   } catch (e) {
-    state.errors.wiki = e.message || String(e);
-    console.error('AI knowledge: wiki sync failed:', e.message || e);
+    setErrors('wiki', [`${e.message || e}${state.wikiPages.size ? ' (previous copy kept)' : ''}`]);
   }
 
   await rebuild();
@@ -129,8 +194,13 @@ async function rebuild() {
   if (text === state.text) return false;
   state.text = text;
   state.builtAt = new Date();
+  if (!text) {
+    state.tokens = 0;
+    console.warn('AI knowledge: no guideline documents or Trello boards loaded — assistant unavailable.');
+    return true;
+  }
   state.tokens = await countTokens(text);
-  console.info(`AI knowledge rebuilt: ${state.docs.length} docs, ${state.trello.length} boards, ${wikiCount} wiki pages, ~${state.tokens} tokens`);
+  console.info(`AI knowledge rebuilt: ${state.docs.size} docs, ${state.trello.size} boards, ${wikiCount} wiki pages, ~${state.tokens} tokens`);
   if (state.tokens > TOKEN_WARN_THRESHOLD) {
     console.warn(`AI knowledge is ${state.tokens} tokens — approaching the 100K price step for ${config.AI_MODEL}.`);
   }
@@ -177,6 +247,15 @@ async function setWikiExcluded(urlOrSlug, excluded) {
   return key;
 }
 
+// Configured sources with no copy at all (never loaded successfully), for the prompt and status.
+function getMissingSources() {
+  const missing = [];
+  for (const k of docKeys()) if (!state.docs.has(k)) missing.push(`Google Doc ${k.slice(4)}`);
+  for (const k of boardKeys()) if (!state.trello.has(k)) missing.push(`Trello board ${k.slice(7)}`);
+  if (!Array.from(state.wikiPages.keys()).some(k => !k.startsWith('skip:'))) missing.push('the SGC wiki');
+  return missing;
+}
+
 function getStatus() {
   const keptWiki = Array.from(state.wikiPages.keys()).filter(k => !k.startsWith('skip:'));
   const skipped = Array.from(state.wikiPages.entries()).filter(([k]) => k.startsWith('skip:'));
@@ -186,8 +265,9 @@ function getStatus() {
     tokens: state.tokens,
     builtAt: state.builtAt,
     lastSyncAt: state.lastSyncAt,
-    docs: state.docs.map(d => ({ title: d.title, updated: d.updated, chars: d.text.length })),
-    trello: state.trello.map(d => ({ title: d.title, updated: d.updated, chars: d.text.length })),
+    docs: loaded(state.docs, docKeys()).map(d => ({ title: d.title, updated: d.updated, chars: d.text.length })),
+    trello: loaded(state.trello, boardKeys()).map(d => ({ title: d.title, updated: d.updated, chars: d.text.length })),
+    missing: getMissingSources(),
     wikiKept: keptWiki.filter(k => !state.wikiExcluded.has(k)).length,
     wikiSkipped: skipped.map(([k, v]) => `${k.replace(/^skip:[^/]+\//, '')} (${v.reason})`),
     wikiExcluded: Array.from(state.wikiExcluded),
@@ -201,5 +281,6 @@ module.exports = {
   getKnowledgeText,
   isReady,
   getStatus,
+  getMissingSources,
   setWikiExcluded
 };

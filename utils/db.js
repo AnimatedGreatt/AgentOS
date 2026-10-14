@@ -3,6 +3,12 @@ const config = require('../config');
 
 const connectionString = process.env.DATABASE_URL || config.DATABASE_URL;
 const pool = new Pool({ connectionString });
+// Idle pooled connections can error when Postgres restarts or the network drops. Without a
+// listener, node-postgres re-emits that as an unhandled 'error' event and the process crashes.
+// The pool discards the broken connection and opens a new one on the next query.
+pool.on('error', (err) => {
+  console.error('Postgres pool: idle connection error (connection discarded):', err && err.message ? err.message : err);
+});
 
 async function init() {
   // Create tables if they don't exist and ensure single-row seeds

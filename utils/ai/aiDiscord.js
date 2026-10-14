@@ -270,13 +270,26 @@ async function handleAiFeedbackModal(interaction) {
   await interaction.deferReply({ ephemeral: true });
   const queryId = Number(String(interaction.customId).split(':')[1]);
   const comment = interaction.fields.getTextInputValue('comment');
+  if (!Number.isInteger(queryId) || queryId <= 0) {
+    await interaction.editReply('Could not find that answer anymore.');
+    return;
+  }
 
-  const query = await aiStore.getQuery(queryId).catch(() => null);
+  let query;
+  let firstReport;
+  try {
+    query = await aiStore.getQuery(queryId);
+    firstReport = query ? await aiStore.markReported(queryId) : false;
+  } catch (e) {
+    console.error('AI: feedback lookup failed:', e.message || e);
+    await interaction.editReply("Couldn't save your report right now (database problem) — please try again in a bit.");
+    return;
+  }
   if (!query) {
     await interaction.editReply('Could not find that answer anymore.');
     return;
   }
-  if (!(await aiStore.markReported(queryId).catch(() => false))) {
+  if (!firstReport) {
     await interaction.editReply('This answer has already been reported — thanks!');
     return;
   }
@@ -330,6 +343,7 @@ async function statusEmbed() {
     ...s.trello.map(d => `🗂️ ${d.title} — activity ${d.updated || '?'}`),
     `🌐 Wiki — ${s.wikiKept} pages used, ${s.wikiSkipped.length} skipped (unfinished/tales), ${s.wikiExcluded.length} excluded by staff`
   ];
+  if (s.missing.length) sourceLines.push(`❌ Not loaded: ${s.missing.join(', ')}`);
   const errors = Object.entries(s.errors).map(([k, v]) => `**${k}:** ${v}`);
 
   const embed = new EmbedBuilder()

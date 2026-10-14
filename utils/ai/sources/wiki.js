@@ -148,6 +148,8 @@ async function syncWiki({ previous, full, since, excluded, editDates }) {
   }
 
   const urls = await listPageUrls(base);
+  // An outage can serve an empty sitemap; treating that as "every page was deleted" would wipe the wiki.
+  if (urls.length === 0) throw new Error('Wiki sitemap returned no pages');
   const toFetch = full || !previous || previous.size === 0
     ? urls
     : urls.filter(u => {
@@ -187,6 +189,15 @@ async function syncWiki({ previous, full, since, excluded, editDates }) {
   for (const k of Array.from(pages.keys())) {
     const bare = k.replace(/^skip:/, '');
     if (!live.has(bare)) pages.delete(k);
+  }
+
+  // If most previously usable pages vanished in one sync, the wiki is more likely broken than edited
+  // (maintenance pages, rate limiting). Keep the previous copy instead; the caller records the error.
+  const countKept = (m) => Array.from(m.keys()).filter(k => !k.startsWith('skip:')).length;
+  const before = previous ? countKept(previous) : 0;
+  const after = countKept(pages);
+  if (before >= 5 && after < before * 0.5) {
+    throw new Error(`Wiki sync dropped from ${before} to ${after} usable pages; keeping the previous copy`);
   }
 
   for (const k of pages.keys()) if (k.startsWith('skip:')) skipped.push(k.slice(5));
