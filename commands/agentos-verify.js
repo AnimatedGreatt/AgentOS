@@ -7,7 +7,7 @@ const crypto = require('crypto');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('agentos-verify')
-    .setDescription('Link your Discord account to a Roblox username (one-click confirm)')
+    .setDescription('Link (or re-link) your Discord account to a Roblox username')
     .addStringOption(opt => opt.setName('username').setDescription('Roblox username').setRequired(true)),
 
   async execute(interaction) {
@@ -43,10 +43,15 @@ module.exports = {
 
       const authUrl = `https://apis.roblox.com/oauth/v1/authorize?client_id=${encodeURIComponent(clientId)}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&scope=openid%20profile&state=${encodeURIComponent(state)}`;
 
+      const existing = await verificationStore.getByDiscord(discordId).catch(() => null);
+      const relinkNote = existing && existing.roblox_username
+        ? `\n\nYou are currently linked to **${existing.roblox_username}**. Completing this will replace that link.`
+        : '';
+
       const startEmbed = new EmbedBuilder()
         .setTitle('AgentOS Verification (Roblox OAuth)')
         .setColor(0x00aff1)
-        .setDescription(`To verify ownership of Roblox account **${roblox}**, click the button below to authorize via Roblox. The OAuth flow will confirm your Roblox account and complete verification automatically.`)
+        .setDescription(`To verify ownership of Roblox account **${roblox}**, click the button below to authorize via Roblox. The OAuth flow will confirm your Roblox account and complete verification automatically.${relinkNote}`)
         .setTimestamp(new Date());
 
       const row = new ActionRowBuilder().addComponents(

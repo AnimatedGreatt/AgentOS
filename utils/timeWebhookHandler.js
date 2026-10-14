@@ -1,5 +1,6 @@
 const config = require("../config");
 const { google } = require("googleapis");
+const axios = require('axios');
 const { EmbedBuilder } = require('discord.js');
 const { getState } = require('./adminState');
 const verificationStore = require('./verificationStore');
@@ -203,6 +204,17 @@ async function handleTimeWebhookMessage(message) {
             // Try verification store first
             let v = null;
             try { v = await verificationStore.getByRoblox(parsed.username); } catch (e) { console.warn('verificationStore.getByRoblox failed:', e); }
+            // Stored username may be stale after a Roblox rename: resolve the current name to a user id instead
+            if (!v) {
+              try {
+                const lookup = await axios.post('https://users.roblox.com/v1/usernames/users', { usernames: [parsed.username], excludeBannedUsers: true });
+                const robloxId = lookup.data && lookup.data.data && lookup.data.data[0] ? lookup.data.data[0].id : null;
+                if (robloxId) {
+                  v = await verificationStore.getByRobloxId(robloxId);
+                  if (v) v = await verificationStore.refreshUsername(v);
+                }
+              } catch (e) { console.warn('Roblox id fallback lookup failed:', e?.response?.status || e.message || e); }
+            }
             if (isDebug) console.debug('verification lookup result for', parsed.username, v ? { discord_id: v.discord_id, roblox_userid: v.roblox_userid } : null);
             if (v && v.discord_id) {
               member = await message.guild.members.fetch(v.discord_id, { force: true }).catch(() => null);

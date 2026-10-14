@@ -1,3 +1,4 @@
+const axios = require('axios');
 const { pool } = require('./db');
 
 async function init() {
@@ -25,22 +26,69 @@ async function init() {
 // Note: table initialization is intentionally not run at require-time here.
 // Call `init()` from app startup when a real DATABASE_URL is configured.
 
+// Link (or re-link) a Discord account to a Roblox account. Callers must have already proven
+// ownership of the Roblox account (OAuth or profile code), so any older binding that conflicts
+// with this one is replaced: the Discord account's previous link, a stale username row for the
+// same Roblox user id (e.g. after a Roblox username change), or another row holding this username.
 async function addVerification(robloxUsername, robloxUserId, discordId) {
-  // Enforce one-to-one: check existing bindings
-  const byRoblox = await getByRoblox(robloxUsername);
-  if (byRoblox) {
-    if (byRoblox.discord_id === discordId) return byRoblox; // already same binding
-    throw new Error('roblox_already_bound');
+  const username = String(robloxUsername).toLowerCase();
+  const userId = robloxUserId ? String(robloxUserId) : null;
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const existing = await client.query(
+      `SELECT roblox_username, roblox_userid, discord_id FROM bot_verifications
+       WHERE discord_id = $1 OR roblox_username = $2 OR ($3::text IS NOT NULL AND roblox_userid = $3)`,
+      [discordId, username, userId]
+    );
+    for (const row of existing.rows) {
+      if (row.discord_id !== discordId) {
+        console.warn('Verification: replacing binding held by another Discord account', { replaced: row, discordId, username, userId });
+      }
+    }
+    await client.query(
+      `DELETE FROM bot_verifications
+       WHERE discord_id = $1 OR roblox_username = $2 OR ($3::text IS NOT NULL AND roblox_userid = $3)`,
+      [discordId, username, userId]
+    );
+    const res = await client.query(
+      `INSERT INTO bot_verifications (roblox_username, roblox_userid, discord_id) VALUES ($1, $2, $3)
+       RETURNING roblox_username, roblox_userid, discord_id, created_at`,
+      [username, userId, discordId]
+    );
+    await client.query('COMMIT');
+    const previous = existing.rows.find(r => r.discord_id === discordId) || null;
+    return { ...res.rows[0], previous_roblox_username: previous ? previous.roblox_username : null };
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => null);
+    throw err;
+  } finally {
+    client.release();
   }
-  const byDiscord = await getByDiscord(discordId);
-  if (byDiscord) {
-    if (byDiscord.roblox_username === robloxUsername) return byDiscord;
-    throw new Error('discord_already_bound');
-  }
+}
 
-  const q = `INSERT INTO bot_verifications (roblox_username, roblox_userid, discord_id) VALUES ($1, $2, $3) RETURNING roblox_username, roblox_userid, discord_id, created_at`;
-  const res = await pool.query(q, [robloxUsername.toLowerCase(), robloxUserId ? String(robloxUserId) : null, discordId]);
-  return res.rows[0];
+// Fetch the current Roblox username for a stored binding and update the row if the user has
+// renamed on Roblox since verifying. Returns the (possibly updated) record; on any lookup
+// failure the original record is returned unchanged.
+async function refreshUsername(record) {
+  if (!record || !record.roblox_userid) return record;
+  let currentName = null;
+  try {
+    const res = await axios.get(`https://users.roblox.com/v1/users/${encodeURIComponent(record.roblox_userid)}`);
+    currentName = res.data && res.data.name ? String(res.data.name).toLowerCase() : null;
+  } catch (err) {
+    console.warn('Verification: failed to fetch current Roblox username', record.roblox_userid, err?.response?.status || err.message || err);
+    return record;
+  }
+  if (!currentName || currentName === String(record.roblox_username).toLowerCase()) return record;
+  try {
+    const updated = await addVerification(currentName, record.roblox_userid, record.discord_id);
+    console.log('Verification: refreshed renamed Roblox account', { discord_id: record.discord_id, from: record.roblox_username, to: currentName });
+    return updated;
+  } catch (err) {
+    console.warn('Verification: failed to store refreshed Roblox username', err);
+    return record;
+  }
 }
 
 async function removeByRoblox(robloxUsername) {
@@ -58,6 +106,11 @@ async function getByRoblox(robloxUsername) {
 
 async function getByDiscord(discordId) {
   const res = await pool.query('SELECT roblox_username, roblox_userid, discord_id, created_at FROM bot_verifications WHERE discord_id = $1', [discordId]);
+  return res.rows[0] || null;
+}
+
+async function getByRobloxId(robloxUserId) {
+  const res = await pool.query('SELECT roblox_username, roblox_userid, discord_id, created_at FROM bot_verifications WHERE roblox_userid = $1', [String(robloxUserId)]);
   return res.rows[0] || null;
 }
 
@@ -100,6 +153,8 @@ module.exports = {
   removeByDiscord,
   getByRoblox,
   getByDiscord,
+  getByRobloxId,
+  refreshUsername,
   createChallenge,
   getChallenge,
   clearChallenge,

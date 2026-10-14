@@ -1,7 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const { google } = require('googleapis');
 const config = require('../config');
-const { getByDiscord } = require('../utils/verificationStore');
+const { getByDiscord, refreshUsername } = require('../utils/verificationStore');
 
 function colIndexToLetter(index) {
   let s = '';
@@ -24,6 +24,19 @@ function parseRange(range) {
     endCol: m[4].toUpperCase(),
     endRow: m[5] ? Number(m[5]) : undefined
   };
+}
+
+function findRowIndex(rows, nameCol, username) {
+  const target = String(username).toLowerCase();
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i] || [];
+    const cell = String(row[nameCol] || '').trim();
+    const rowStr = (row || []).join(' | ');
+    if (!cell && !rowStr) continue;
+    if (cell && cell.toLowerCase() === target) return i;
+    if (String(rowStr).toLowerCase().includes(target)) return i;
+  }
+  return -1;
 }
 
 module.exports = {
@@ -139,15 +152,17 @@ module.exports = {
           continue;
         }
 
-        const username = String(verification.roblox_username).trim();
-        let foundIdx = -1;
-        for (let i = 0; i < rows.length; i++) {
-          const row = rows[i] || [];
-          const cell = String(row[NAME_COL] || '').trim();
-          const rowStr = (row || []).join(' | ');
-          if (!cell && !rowStr) continue;
-          if (cell && cell.toLowerCase() === username.toLowerCase()) { foundIdx = i; break; }
-          if (String(rowStr).toLowerCase().includes(username.toLowerCase())) { foundIdx = i; break; }
+        let username = String(verification.roblox_username).trim();
+        let foundIdx = findRowIndex(rows, NAME_COL, username);
+
+        // The stored username may be stale if the user renamed on Roblox after verifying
+        if (foundIdx === -1) {
+          const refreshed = await refreshUsername(verification).catch(() => verification);
+          const refreshedName = String((refreshed && refreshed.roblox_username) || '').trim();
+          if (refreshedName && refreshedName.toLowerCase() !== username.toLowerCase()) {
+            username = refreshedName;
+            foundIdx = findRowIndex(rows, NAME_COL, username);
+          }
         }
 
         if (foundIdx === -1) {

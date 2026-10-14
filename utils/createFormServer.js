@@ -1231,16 +1231,17 @@ else {
         }));
       }
 
-      // Persist verification
+      // Persist verification (replaces any previous link for this Discord or Roblox account)
+      let verification;
       try {
-        await verificationStore.addVerification(robloxUsername || challenge.roblox_username, robloxId, challenge.discord_id);
+        verification = await verificationStore.addVerification(robloxUsername || challenge.roblox_username, robloxId, challenge.discord_id);
       } catch (err) {
         console.error('Failed to add verification record:', err);
         // clear the challenge regardless
         await verificationStore.clearChallengeByCode(String(state)).catch(() => null);
         return res.status(500).send(buildOAuthResultPage({
           title: 'Verification failed',
-          message: 'Failed to finalize verification. This account may already be linked.',
+          message: 'Failed to save the verification. Please run /agentos-verify again.',
           statusLabel: 'Database error'
         }));
       }
@@ -1252,7 +1253,9 @@ else {
       try {
         const user = await client.users.fetch(challenge.discord_id).catch(() => null);
         if (user) {
-          await user.send({ content: `✅ Your Discord account has been verified and linked to Roblox account ${robloxUsername || ''} (ID ${robloxId}).` }).catch(() => null);
+          const previous = verification && verification.previous_roblox_username;
+          const relinkNote = previous && previous !== verification.roblox_username ? ` (previously linked as ${previous})` : '';
+          await user.send({ content: `✅ Your Discord account has been verified and linked to Roblox account ${robloxUsername || ''} (ID ${robloxId})${relinkNote}.` }).catch(() => null);
         }
       } catch (err) {
         console.warn('Failed to DM user after verification:', err);

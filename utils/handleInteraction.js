@@ -253,14 +253,6 @@ async function handleInteraction(interaction, client) {
             await interaction.followUp({ embeds: [publicEmbed] });
             return;
           } catch (err) {
-            if (err && err.message === 'roblox_already_bound') {
-              await interaction.editReply({ content: 'That Roblox username is already bound to another Discord account.', ephemeral: true });
-              return;
-            }
-            if (err && err.message === 'discord_already_bound') {
-              await interaction.editReply({ content: 'Your Discord account is already bound to a different Roblox username.', ephemeral: true });
-              return;
-            }
             console.error('Failed to finalize verification (button):', err);
             await interaction.editReply({ content: 'Failed to complete verification. Try again later.', ephemeral: true });
             return;

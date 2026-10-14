@@ -315,7 +315,7 @@ async function handleXpAuditLogMessage(message, client) {
     .setTitle('AOS Alert')
     .setColor(0xed4245)
     .setDescription(`User [${username}](${aosPageUrl || 'https://animatedgreatt.github.io/dashboard.html'}) with ${count} outstanding warrant${count === 1 ? '' : 's'} has been detected online at ${currentTime}. Please respond.`)
-    .setFooter('XP Monitor');
+    .setFooter({ text: 'XP Monitor' });
 
   if (aosPageUrl) embed.setURL(aosPageUrl);
 
