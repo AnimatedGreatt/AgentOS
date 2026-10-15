@@ -76,7 +76,13 @@ function stripLaughOpener(text) {
 
 // Web search is only offered to the creator: ~$0.01 per search plus the result tokens.
 const WEB_SEARCH_TOOL = { type: 'web_search_20250305', name: 'web_search', max_uses: 3 };
-const WEB_SEARCH_NOTE = `Web search is available for this question because it comes from your creator. Use it only when the question needs current or outside information that the sources don't cover; otherwise answer from the sources as usual. When you use it, name the website(s) in the source line.`;
+// Added as a system block (after the cache breakpoint) only when the asker's user ID is the creator's,
+// so members can't unlock it by writing something similar in their question.
+const CREATOR_MODE = `<creator_mode>
+This question comes from your creator, so two exceptions apply to it:
+- Topic: you aren't limited to OSI, SGC or the sources. Answer whatever they ask, using general knowledge where needed. For OSI or game questions, the sources and staff corrections still come first. Skip the source line when the answer doesn't come from a document.
+- Web search: you have a web search tool. Use it when the question needs current or outside information you don't reliably know; otherwise don't. When you use it, name the website(s) in a short italic source line.
+</creator_mode>`;
 const MAX_CONTINUATIONS = 2;
 
 function addUsage(total, u) {
@@ -112,10 +118,10 @@ function renderContext(context) {
  * @param {string} params.askerName
  * @param {{ memory?: Array<{question, answer}>, replyChain?: string[], chat?: string[] }} [params.context]
  *   see buildContext in aiDiscord.js; message lines are formatted "Name: text"
- * @param {boolean} [params.allowWeb] - give the model the web search tool
+ * @param {boolean} [params.fromCreator] - lift the topic limits and give the model web search
  * @returns {Promise<{ text: string, usage: object, latencyMs: number }>}
  */
-async function askAi({ question, askerName, context, allowWeb = false }) {
+async function askAi({ question, askerName, context, fromCreator = false }) {
   const client = getClient();
   if (!client) throw new AiUnavailableError('The AI assistant is not configured.');
   if (!knowledgeBase.isReady()) throw new AiUnavailableError("I'm still loading the guidelines — try again in a minute.");
@@ -125,7 +131,6 @@ async function askAi({ question, askerName, context, allowWeb = false }) {
 
   const userParts = renderContext(context);
   userParts.push(`Today is ${new Date().toISOString().slice(0, 10)}.`);
-  if (allowWeb) userParts.push(WEB_SEARCH_NOTE);
   userParts.push(`<question from="${String(askerName || 'member').replace(/"/g, "'")}">\n${question}\n</question>`);
 
   const messages = [{ role: 'user', content: userParts.join('\n\n') }];
@@ -140,12 +145,13 @@ async function askAi({ question, askerName, context, allowWeb = false }) {
         max_tokens: 3000,
         output_config: { effort: 'low' },
         // Only the creator's requests carry tools, so they use their own cache entry.
-        ...(allowWeb ? { tools: [WEB_SEARCH_TOOL] } : {}),
+        ...(fromCreator ? { tools: [WEB_SEARCH_TOOL] } : {}),
         system: [
           { type: 'text', text: INSTRUCTIONS },
           // 1h TTL: questions are often more than 5 minutes apart, which would make most requests a cache write.
           { type: 'text', text: knowledgeBase.getKnowledgeText(), cache_control: { type: 'ephemeral', ttl: '1h' } },
-          { type: 'text', text: formatNotes(notes, knowledgeBase.getMissingSources()) }
+          { type: 'text', text: formatNotes(notes, knowledgeBase.getMissingSources()) },
+          ...(fromCreator ? [{ type: 'text', text: CREATOR_MODE }] : [])
         ],
         messages
       });
