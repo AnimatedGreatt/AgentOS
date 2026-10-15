@@ -41,7 +41,8 @@ Tone:
 - Talk like a regular member of the server who happens to know the rules well, not a customer-service bot. Match the register of the message and the conversation around it.
 - Not every mention is a request for help. If someone is joking, reacting, venting, asking your opinion or pulling you into a conversation, respond to what was actually said, in context, the way a person in the chat would. Don't steer it back to guidelines or offer to answer questions.
 - No eager openers or closers: skip "Great question!", "Happy to help!", "Let me know if you need anything else!" and offers of further help. Just say the thing.
-- Vary how you phrase things. Your own earlier messages often appear in the context: don't reuse their openings, sentence shapes or pet phrases. In particular, don't start with a reaction word ("Ha,", "Haha", "Oh,", "Ah,", "Fair,", "Honestly,"); usually just start with the actual reply.
+- Vary how you phrase things. Your own earlier messages often appear in the context: don't reuse their openings, sentence shapes or pet phrases. Don't open with a laugh or reaction word ("Ha", "Haha", "Oh,", "Ah,", "Fair,", "Honestly,"): start with the actual reply.
+- When something is funny, show it through the reply itself rather than announcing that you laughed: play along with the bit, escalate it, answer deadpan as if it were a serious question, fire back a one-line comeback, or tease back. A short reaction like "lmao", "💀" or "😭" now and then is fine, but never your default, and never the same one twice in a row.
 - Casual messages get a short, casual reply without a source line. Rules questions still get the accurate, sourced answer described above.
 - Keep it good-natured: don't mock or take sides against members, and stay accurate when a rule is involved.
 
@@ -62,6 +63,29 @@ function truncateForDiscord(text) {
   const cut = text.slice(0, DISCORD_LIMIT);
   const lastBreak = Math.max(cut.lastIndexOf('\n'), cut.lastIndexOf('. '));
   return `${cut.slice(0, lastBreak > DISCORD_LIMIT * 0.6 ? lastBreak + 1 : DISCORD_LIMIT).trim()}\n…`;
+}
+
+// The model keeps opening casual replies with "Ha," despite the prompt; drop it when it does.
+const LAUGH_OPENER = /^(?:(?:ha+)+h?|heh)(?:\s+(?:ha+)+h?)*[!,.…—-]*\s+/i;
+
+function stripLaughOpener(text) {
+  const rest = text.replace(LAUGH_OPENER, '');
+  if (rest === text || !rest.trim()) return text;
+  return rest.charAt(0).toUpperCase() + rest.slice(1);
+}
+
+// Web search is only offered to the creator: ~$0.01 per search plus the result tokens.
+const WEB_SEARCH_TOOL = { type: 'web_search_20250305', name: 'web_search', max_uses: 3 };
+const WEB_SEARCH_NOTE = `Web search is available for this question because it comes from your creator. Use it only when the question needs current or outside information that the sources don't cover; otherwise answer from the sources as usual. When you use it, name the website(s) in the source line.`;
+const MAX_CONTINUATIONS = 2;
+
+function addUsage(total, u) {
+  for (const k of ['input_tokens', 'output_tokens', 'cache_read_input_tokens', 'cache_creation_input_tokens']) {
+    total[k] = (total[k] || 0) + (u[k] || 0);
+  }
+  const searches = u.server_tool_use && u.server_tool_use.web_search_requests;
+  if (searches) total.web_search_requests = (total.web_search_requests || 0) + searches;
+  return total;
 }
 
 class AiUnavailableError extends Error {}
@@ -88,9 +112,10 @@ function renderContext(context) {
  * @param {string} params.askerName
  * @param {{ memory?: Array<{question, answer}>, replyChain?: string[], chat?: string[] }} [params.context]
  *   see buildContext in aiDiscord.js; message lines are formatted "Name: text"
+ * @param {boolean} [params.allowWeb] - give the model the web search tool
  * @returns {Promise<{ text: string, usage: object, latencyMs: number }>}
  */
-async function askAi({ question, askerName, context }) {
+async function askAi({ question, askerName, context, allowWeb = false }) {
   const client = getClient();
   if (!client) throw new AiUnavailableError('The AI assistant is not configured.');
   if (!knowledgeBase.isReady()) throw new AiUnavailableError("I'm still loading the guidelines — try again in a minute.");
@@ -100,23 +125,34 @@ async function askAi({ question, askerName, context }) {
 
   const userParts = renderContext(context);
   userParts.push(`Today is ${new Date().toISOString().slice(0, 10)}.`);
+  if (allowWeb) userParts.push(WEB_SEARCH_NOTE);
   userParts.push(`<question from="${String(askerName || 'member').replace(/"/g, "'")}">\n${question}\n</question>`);
 
+  const messages = [{ role: 'user', content: userParts.join('\n\n') }];
   const started = Date.now();
+  const usage = {};
   let response;
   try {
-    response = await client.messages.create({
-      model: config.AI_MODEL,
-      max_tokens: 3000,
-      output_config: { effort: 'low' },
-      system: [
-        { type: 'text', text: INSTRUCTIONS },
-        // 1h TTL: questions are often more than 5 minutes apart, which would make most requests a cache write.
-        { type: 'text', text: knowledgeBase.getKnowledgeText(), cache_control: { type: 'ephemeral', ttl: '1h' } },
-        { type: 'text', text: formatNotes(notes, knowledgeBase.getMissingSources()) }
-      ],
-      messages: [{ role: 'user', content: userParts.join('\n\n') }]
-    });
+    // A long server-side search loop ends with pause_turn; re-sending the partial answer resumes it.
+    for (let i = 0; i <= MAX_CONTINUATIONS; i++) {
+      response = await client.messages.create({
+        model: config.AI_MODEL,
+        max_tokens: 3000,
+        output_config: { effort: 'low' },
+        // Only the creator's requests carry tools, so they use their own cache entry.
+        ...(allowWeb ? { tools: [WEB_SEARCH_TOOL] } : {}),
+        system: [
+          { type: 'text', text: INSTRUCTIONS },
+          // 1h TTL: questions are often more than 5 minutes apart, which would make most requests a cache write.
+          { type: 'text', text: knowledgeBase.getKnowledgeText(), cache_control: { type: 'ephemeral', ttl: '1h' } },
+          { type: 'text', text: formatNotes(notes, knowledgeBase.getMissingSources()) }
+        ],
+        messages
+      });
+      addUsage(usage, response.usage || {});
+      if (response.stop_reason !== 'pause_turn') break;
+      messages.push({ role: 'assistant', content: response.content });
+    }
   } catch (e) {
     if (e instanceof Anthropic.RateLimitError) throw new AiUnavailableError("I'm getting too many questions right now — try again in a moment.");
     if (e instanceof Anthropic.APIError && e.status >= 500) throw new AiUnavailableError('The AI service is having trouble right now — try again shortly.');
@@ -124,14 +160,18 @@ async function askAi({ question, askerName, context }) {
   }
   const latencyMs = Date.now() - started;
 
-  let text = response.content.filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
+  // Text written before or between searches ("Let me look that up…") isn't part of the answer.
+  // Search answers are split into several text blocks around citations, so join them without separators.
+  const content = response.content;
+  const lastSearch = content.map(b => b.type).lastIndexOf('web_search_tool_result');
+  let text = stripLaughOpener(content.slice(lastSearch + 1).filter(b => b.type === 'text').map(b => b.text).join('').trim());
   if (response.stop_reason === 'refusal') {
     text = "Sorry, I can't help with that one. Try rephrasing, or ask a supervisor.";
   } else if (!text) {
     text = "I couldn't come up with an answer for that — try rephrasing, or ask a supervisor.";
   }
 
-  return { text: truncateForDiscord(text), usage: response.usage || {}, latencyMs };
+  return { text: truncateForDiscord(text), usage, latencyMs };
 }
 
 module.exports = { askAi, AiUnavailableError };

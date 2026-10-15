@@ -91,7 +91,8 @@ function feedbackRow(queryId) {
 async function answerQuestion({ question, context, user, member, guildId, channelId, source }) {
   const askerName = nameWithRole((member && member.displayName) || user.globalName || user.username, user.id);
   try {
-    const result = await askAi({ question, askerName, context });
+    const allowWeb = !!config.AI_CREATOR_ID && user.id === config.AI_CREATOR_ID;
+    const result = await askAi({ question, askerName, context, allowWeb });
     let queryId = null;
     try {
       queryId = await aiStore.logQuery({
