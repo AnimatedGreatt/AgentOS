@@ -32,6 +32,11 @@ function isAdmin(userId) {
   return (config.ADMIN_WHITELIST || []).includes(userId);
 }
 
+// Lets the model recognise its creator in the question and in chat context.
+function nameWithRole(name, userId) {
+  return config.AI_CREATOR_ID && userId === config.AI_CREATOR_ID ? `${name} (your creator)` : name;
+}
+
 function isAiGuild(guildId) {
   return !!guildId && config.AI_GUILD_IDS_LIST.includes(guildId);
 }
@@ -84,7 +89,7 @@ function feedbackRow(queryId) {
  * Asks the model and logs the query. Returns the reply payload for Discord.
  */
 async function answerQuestion({ question, context, user, member, guildId, channelId, source }) {
-  const askerName = (member && member.displayName) || user.globalName || user.username;
+  const askerName = nameWithRole((member && member.displayName) || user.globalName || user.username, user.id);
   try {
     const result = await askAi({ question, askerName, context });
     let queryId = null;
@@ -134,10 +139,10 @@ function describeMessage(msg, client, maxChars) {
     // Slash command replies don't show who asked unless we say so.
     const meta = msg.interactionMetadata;
     name = meta && meta.user
-      ? `AgentOS (you), answering ${displayNameOf(msg.guild, meta.user)}'s /ask`
+      ? `AgentOS (you), answering ${nameWithRole(displayNameOf(msg.guild, meta.user), meta.user.id)}'s /ask`
       : 'AgentOS (you)';
   } else {
-    name = (msg.member && msg.member.displayName) || msg.author.globalName || msg.author.username;
+    name = nameWithRole((msg.member && msg.member.displayName) || msg.author.globalName || msg.author.username, msg.author.id);
   }
   return `${name}: ${text}`;
 }
@@ -229,7 +234,7 @@ async function handleAiMention(message, client) {
 
   const question = cleanContent(content, message.channel).trim();
   if (!question && !message.reference) {
-    await reply({ content: 'Hi! Ask me anything about OSI guidelines, the UCMJ, punishments, or the game — just mention me with your question, or use `/ask`.' });
+    await reply({ content: 'You rang? Mention me with a question or use `/ask`.' });
     return;
   }
 

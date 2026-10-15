@@ -265,8 +265,11 @@ module.exports = {
   // Comma-separated guild IDs where the assistant may answer (the knowledge base contains restricted OSI documents).
   AI_GUILD_IDS: process.env.AI_GUILD_IDS || "1041577710067138560",
   AI_MODEL: process.env.AI_MODEL || "claude-haiku-5-5",
-  // Channel that receives "wrong answer" reports. Falls back to LOG_CHANNEL_ID.
-  AI_FEEDBACK_CHANNEL_ID: cleanId(process.env.AI_FEEDBACK_CHANNEL_ID) || cleanId(process.env.LOG_CHANNEL_ID) || "1467682055298089131",
+  // Channel that receives "wrong answer" reports. Deliberately no LOG_CHANNEL_ID fallback: that is the application log.
+  AI_FEEDBACK_CHANNEL_ID: cleanId(process.env.AI_FEEDBACK_CHANNEL_ID) || "1560299106193375314",
+  // Who built the bot; the assistant knows them and plays along when members poke fun at them.
+  AI_CREATOR_NAME: process.env.AI_CREATOR_NAME || "Animated",
+  AI_CREATOR_ID: cleanId(process.env.AI_CREATOR_ID) || "716248402513494027",
   AI_USER_COOLDOWN_SECONDS: process.env.AI_USER_COOLDOWN_SECONDS !== undefined ? Number(process.env.AI_USER_COOLDOWN_SECONDS) : 10,
   AI_USER_DAILY_LIMIT: process.env.AI_USER_DAILY_LIMIT !== undefined ? Number(process.env.AI_USER_DAILY_LIMIT) : 40,
   AI_SYNC_INTERVAL_MINUTES: process.env.AI_SYNC_INTERVAL_MINUTES !== undefined ? Number(process.env.AI_SYNC_INTERVAL_MINUTES) : 30,
