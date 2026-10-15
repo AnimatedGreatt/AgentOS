@@ -327,12 +327,15 @@ async function handleAiFeedbackModal(interaction) {
     .setTimestamp(new Date(query.created_at));
   if (query.message_url) embed.setURL(query.message_url);
 
+  const channelId = config.AI_FEEDBACK_CHANNEL_ID;
   try {
-    const channel = await interaction.client.channels.fetch(config.AI_FEEDBACK_CHANNEL_ID);
+    const channel = await interaction.client.channels.fetch(channelId);
+    if (!channel || !channel.isTextBased()) throw new Error(`channel type ${channel ? channel.type : 'null'} can't receive messages`);
     await channel.send({ embeds: [embed], allowedMentions: { parse: [] } });
     await interaction.editReply('Thanks — staff have been notified so the answer can be corrected.');
   } catch (e) {
-    console.error('AI: failed to post feedback report:', e.message || e);
+    // e.code 10003 = unknown channel (wrong ID or bot not in that server), 50001 = missing access, 50013 = missing permissions.
+    console.error(`AI: failed to post feedback report to channel ${channelId}${e.code ? ` (Discord code ${e.code})` : ''}:`, e.message || e);
     await interaction.editReply('Thanks — your report was saved, but I could not notify staff.');
   }
 }
