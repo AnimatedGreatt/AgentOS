@@ -37,8 +37,10 @@ function nameWithRole(name, userId) {
   return config.AI_CREATOR_ID && userId === config.AI_CREATOR_ID ? `${name} (your creator)` : name;
 }
 
-function isAiGuild(guildId) {
-  return !!guildId && config.AI_GUILD_IDS_LIST.includes(guildId);
+// The creator can use the assistant in any server the bot is in.
+function isAiGuild(guildId, userId) {
+  if (!guildId) return false;
+  return config.AI_GUILD_IDS_LIST.includes(guildId) || (!!config.AI_CREATOR_ID && userId === config.AI_CREATOR_ID);
 }
 
 async function isPaused() {
@@ -220,7 +222,7 @@ async function handleAiMention(message, client) {
   if (/(^|\s)![a-zø]/i.test(content)) return;
   // Opt-out flag: lets people mention the bot in conversation without triggering an answer.
   if (/(^|\s)--ai(\s|$)/i.test(content)) return;
-  if (!isAiGuild(message.guild.id)) return;
+  if (!isAiGuild(message.guild.id, message.author.id)) return;
   if (!process.env.ANTHROPIC_API_KEY) return;
 
   const reply = (payload) => message.reply({ allowedMentions: { parse: [], repliedUser: false }, ...payload }).catch(e => {

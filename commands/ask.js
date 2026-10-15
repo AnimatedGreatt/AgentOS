@@ -21,7 +21,7 @@ module.exports = {
     ),
 
   async execute(interaction) {
-    if (!isAiGuild(interaction.guildId)) {
+    if (!isAiGuild(interaction.guildId, interaction.user.id)) {
       await interaction.reply({ content: "❌ This command is not available in this server.", ephemeral: true });
       return;
     }
