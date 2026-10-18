@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const verificationStore = require('../utils/verificationStore');
+const verificationStore = require('../utils/verification/verificationStore');
 const config = require('../config');
 const axios = require('axios');
 const crypto = require('crypto');

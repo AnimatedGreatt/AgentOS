@@ -1,8 +1,8 @@
 const { SlashCommandBuilder, ChannelType, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } = require('discord.js');
 const config = require('../config');
-const { computeJailTimeFromCharges } = require('../utils/aosSentencing');
-const { listActiveAosEntries, enforceAos30DayExpirationForThread, parseAosStarterData } = require('../utils/aosForumLookup');
-const aosActiveStore = require('../utils/aosActiveStore');
+const { computeJailTimeFromCharges } = require('../utils/aos/aosSentencing');
+const { listActiveAosEntries, enforceAos30DayExpirationForThread, parseAosStarterData } = require('../utils/aos/aosForumLookup');
+const aosActiveStore = require('../utils/aos/aosActiveStore');
 
 const AOS_LIST_COOLDOWN_MS = 60 * 1000;
 let nextAosListAllowedAt = 0;

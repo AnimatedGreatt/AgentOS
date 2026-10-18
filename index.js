@@ -1,14 +1,14 @@
 require("dotenv").config();
-const { startKeepAlive } = require("./utils/dbKeepAlive");
-const verificationStore = require('./utils/verificationStore');
+const { startKeepAlive } = require("./utils/db/dbKeepAlive");
+const verificationStore = require('./utils/verification/verificationStore');
 const arrestStore = require('./utils/arrestStore');
-const aosActiveStore = require('./utils/aosActiveStore');
+const aosActiveStore = require('./utils/aos/aosActiveStore');
 const { Client, GatewayIntentBits } = require("discord.js");
 const { loadCommands } = require("./utils/loadCommands");
-const { handleInteraction } = require("./utils/handleInteraction");
+const { handleInteraction } = require("./utils/interactions/handleInteraction");
 const { handleTrelloIngest } = require("./utils/trelloMessageIngest");
 const { handleMessageCommands } = require("./utils/messageCommands");
-const { handleExamDM } = require("./utils/examMessageHandler");
+const { handleExamDM } = require("./utils/exams/examMessageHandler");
 const { handleTimeWebhookMessage } = require("./utils/timeWebhookHandler");
 const { startSuspensionScheduler } = require("./utils/trelloSuspensionScheduler");
 const { createFormServer } = require("./utils/createFormServer");
@@ -26,11 +26,11 @@ const client = new Client({
   ]
 });
 
-const { startInactivityScheduler } = require("./utils/inactivityScheduler");
-const { startFollowupScheduler } = require("./utils/followupScheduler");
-const probationWatcher = require('./utils/probationWatcher');
-const verifyReminderScheduler = require('./utils/verifyReminderScheduler');
-const { startEventScheduler } = require('./utils/eventScheduler');
+const { startInactivityScheduler } = require("./utils/inactivity/inactivityScheduler");
+const { startFollowupScheduler } = require("./utils/followups/followupScheduler");
+const probationWatcher = require('./utils/probation/probationWatcher');
+const verifyReminderScheduler = require('./utils/verification/verifyReminderScheduler');
+const { startEventScheduler } = require('./utils/events/eventScheduler');
 const config = require('./config');
 
 function buildAosWebUrlForUsername(username) {
@@ -97,16 +97,16 @@ client.once("ready", () => {
   });
   // Schedule existing exam sessions for expiration handling
   try {
-    const examStore = require('./utils/examStore');
+    const examStore = require('./utils/exams/examStore');
     examStore.initExpirationScheduler(client).catch(err => console.error('Failed to initialize exam expiration scheduler:', err));
   } catch (e) {
     console.error('Failed to start exam expiration scheduler:', e);
   }
   // Start DB listener for exam updates (NOTIFY / poll)
   try {
-    const db = require('./utils/db');
-    const examStore = require('./utils/examStore');
-    const { finalizeReview } = require('./utils/handleExamGrade');
+    const db = require('./utils/db/db');
+    const examStore = require('./utils/exams/examStore');
+    const { finalizeReview } = require('./utils/exams/handleExamGrade');
     db.listenForExamUpdates(async (payload, source) => {
       try {
         // payload expected to be JSON like { sessionId: '...' } or plain session id

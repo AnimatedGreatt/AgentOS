@@ -2,7 +2,7 @@ const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const axios = require('axios');
 const config = require('../config');
 const arrestStore = require('../utils/arrestStore');
-const { findActiveAosByUsername } = require('../utils/aosForumLookup');
+const { findActiveAosByUsername } = require('../utils/aos/aosForumLookup');
 
 module.exports = {
   data: new SlashCommandBuilder()

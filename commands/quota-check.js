@@ -332,7 +332,7 @@ module.exports = {
       // Exclude users currently on IN in DB
       let activeLower = new Set();
       try {
-        const { getActiveRobloxUsernames } = require('../utils/inactivityStore');
+        const { getActiveRobloxUsernames } = require('../utils/inactivity/inactivityStore');
         const active = await getActiveRobloxUsernames();
         activeLower = new Set(active.map(a => String(a).toLowerCase()));
       } catch (err) {

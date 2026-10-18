@@ -3,8 +3,8 @@ const { google } = require("googleapis");
 const axios = require('axios');
 const { EmbedBuilder } = require('discord.js');
 const { getState } = require('./adminState');
-const verificationStore = require('./verificationStore');
-const probationStore = require('./probationStore');
+const verificationStore = require('./verification/verificationStore');
+const probationStore = require('./probation/probationStore');
 
 function resolveRoleToken(token, guild) {
   if (!token || !guild) return null;

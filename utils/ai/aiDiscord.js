@@ -125,17 +125,27 @@ function stripBotMention(content, botId) {
   return String(content || '').replace(new RegExp(`<@!?${botId}>`, 'g'), ' ').replace(/\s+/g, ' ').trim();
 }
 
-function describeMessage(msg, client, maxChars) {
+// Most bot embeds keep their real content in fields, not the description.
+function embedText(embed) {
+  const parts = [
+    embed.author && embed.author.name,
+    embed.title,
+    embed.description,
+    ...(embed.fields || []).map(f => `${f.name}: ${f.value}`),
+    embed.footer && embed.footer.text
+  ];
+  return parts.filter(Boolean).join('\n');
+}
+
+function describeMessage(msg, client, maxChars, embedChars = maxChars) {
   const isBot = msg.author.id === client.user.id;
-  let text = cleanContent(stripBotMention(msg.content, client.user.id), msg.channel);
-  if (!text && msg.embeds && msg.embeds.length) {
-    const e = msg.embeds[0];
-    text = [e.title, e.description].filter(Boolean).join(' — ');
-  }
+  const content = cleanContent(stripBotMention(msg.content, client.user.id), msg.channel);
+  const embeds = (msg.embeds || []).map(embedText).filter(Boolean).map(t => `[embed] ${t}`);
+  let text = [content, ...embeds].filter(Boolean).join('\n');
   if (!text) return null;
   // One line per message, so the model can tell where each message starts.
   text = text.replace(/\s*\n+\s*/g, ' ↵ ');
-  const limit = isBot ? BOT_MESSAGE_CHARS : maxChars;
+  const limit = isBot ? BOT_MESSAGE_CHARS : embeds.length ? Math.max(maxChars, embedChars) : maxChars;
   if (text.length > limit) text = `${text.slice(0, limit)}…`;
   let name;
   if (isBot) {
@@ -182,7 +192,8 @@ async function buildContext({ client, channel, userId, message }) {
   const replyChain = chainMessages
     // Bot answers already present in memory don't need repeating.
     .filter(m => !(m.author.id === client.user.id && memoryUrls.has(m.url)))
-    .map(m => describeMessage(m, client, REPLY_CHAIN_CHARS))
+    // Embeds are usually what's being asked about when replied to, so allow them more room.
+    .map(m => describeMessage(m, client, REPLY_CHAIN_CHARS, BOT_MESSAGE_CHARS))
     .filter(Boolean);
 
   let chat = [];

@@ -2,13 +2,13 @@ const express = require("express");
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType } = require("discord.js");
 const config = require("../config");
 const arrestStore = require('./arrestStore');
-const verificationStore = require('./verificationStore');
+const verificationStore = require('./verification/verificationStore');
 const axios = require('axios');
-const { findActiveAosByUsername } = require('./aosForumLookup');
-const { findBlacklistEntry } = require("../utils/blacklistSheet");
+const { findActiveAosByUsername } = require('./aos/aosForumLookup');
+const { findBlacklistEntry } = require("./blacklist/blacklistSheet");
 const { analyzeSpamAnswers } = require("./spamFilter");
 const { getState } = require('./adminState');
-const aosActiveStore = require('./aosActiveStore');
+const aosActiveStore = require('./aos/aosActiveStore');
 
 /**
  * Creates an Express server to handle form submissions from Google Apps Script
@@ -706,8 +706,8 @@ function createFormServer(client) {
   });
 
   // --- Exam web grading endpoints ---
-  const examStore = require('./examStore');
-  const { processGrade } = require('./handleExamGrade');
+  const examStore = require('./exams/examStore');
+  const { processGrade } = require('./exams/handleExamGrade');
 
   // Auth middleware: accept either EXAM_REVIEW_SECRET or a Discord OAuth access token
   async function requireExamAuth(req, res, next) {

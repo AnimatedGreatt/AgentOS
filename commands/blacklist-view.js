@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, ComponentType } = require("discord.js");
-const blacklistStore = require("../utils/blacklistStore");
+const blacklistStore = require("../utils/blacklist/blacklistStore");
 const config = require("../config");
 
 const PAGE_SIZE = 10;

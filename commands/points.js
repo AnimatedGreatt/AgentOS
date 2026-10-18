@@ -1,7 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const { google } = require('googleapis');
 const config = require('../config');
-const { getByDiscord, refreshUsername } = require('../utils/verificationStore');
+const { getByDiscord, refreshUsername } = require('../utils/verification/verificationStore');
 
 function colIndexToLetter(index) {
   let s = '';

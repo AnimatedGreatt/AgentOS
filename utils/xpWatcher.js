@@ -1,7 +1,7 @@
 const config = require('../config');
 const { EmbedBuilder } = require('discord.js');
-const { listActiveAosEntries } = require('./aosForumLookup');
-const aosActiveStore = require('./aosActiveStore');
+const { listActiveAosEntries } = require('./aos/aosForumLookup');
+const aosActiveStore = require('./aos/aosActiveStore');
 const { getState } = require('./adminState');
 
 const recentAlerts = new Map();

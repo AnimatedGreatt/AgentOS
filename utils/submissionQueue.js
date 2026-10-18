@@ -1,4 +1,4 @@
-const { pool } = require('./db');
+const { pool } = require('./db/db');
 
 async function addSubmission({ guildId, userId, userTag, link, caseNumber, verdict, suspect }) {
   const res = await pool.query(

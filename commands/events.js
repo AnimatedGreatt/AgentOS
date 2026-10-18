@@ -1,8 +1,8 @@
 const { SlashCommandBuilder } = require('discord.js');
 const config = require('../config');
-const eventStore = require('../utils/eventStore');
-const eventSystem = require('../utils/eventSystem');
-const eventScheduler = require('../utils/eventScheduler');
+const eventStore = require('../utils/events/eventStore');
+const eventSystem = require('../utils/events/eventSystem');
+const eventScheduler = require('../utils/events/eventScheduler');
 
 const WEEKDAY_CHOICES = [
   { name: 'Sunday', value: '0' },

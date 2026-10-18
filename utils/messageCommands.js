@@ -5,8 +5,8 @@ const config = require("../config");
 const agentosStore = require('./agentosStore');
 const { getChangelog, setChangelog } = require("./changelogStore");
 const { getState, setState } = require("./adminState");
-const verificationStore = require('./verificationStore');
-const eventSystem = require('./eventSystem');
+const verificationStore = require('./verification/verificationStore');
+const eventSystem = require('./events/eventSystem');
 const topTexts = require('../data/top-texts.json');
 
 let lastTopTextIndex = -1;

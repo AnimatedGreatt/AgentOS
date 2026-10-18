@@ -1,4 +1,4 @@
-const { pool } = require('./db');
+const { pool } = require('./db/db');
 
 async function isPaused(commandName) {
   if (!commandName) return false;
