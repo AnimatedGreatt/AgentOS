@@ -3,7 +3,7 @@ const { startKeepAlive } = require("./utils/db/dbKeepAlive");
 const verificationStore = require('./utils/verification/verificationStore');
 const arrestStore = require('./utils/arrestStore');
 const aosActiveStore = require('./utils/aos/aosActiveStore');
-const { Client, GatewayIntentBits } = require("discord.js");
+const { Client, GatewayIntentBits, Partials } = require("discord.js");
 const { loadCommands } = require("./utils/loadCommands");
 const { handleInteraction } = require("./utils/interactions/handleInteraction");
 const { handleTrelloIngest } = require("./utils/trelloMessageIngest");
@@ -23,7 +23,9 @@ const client = new Client({
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.DirectMessages,
     GatewayIntentBits.MessageContent
-  ]
+  ],
+  // DM channels aren't cached after a restart; without this, DMs (exam answers) are silently dropped
+  partials: [Partials.Channel]
 });
 
 const { startInactivityScheduler } = require("./utils/inactivity/inactivityScheduler");
@@ -227,7 +229,7 @@ client.on("interactionCreate", async interaction => {
 // Message handler for Trello ingestion
 client.on("messageCreate", async message => {
   // Handle exam DM answers first
-  try { await handleExamDM(message, client); } catch (e) { /* continue to other handlers */ }
+  try { await handleExamDM(message, client); } catch (e) { console.error('Exam DM handler failed:', e); }
   try { await handleXpAuditLogMessage(message, client); } catch (e) { console.error('XP watcher failed:', e); }
   await handleMessageCommands(message, client);
   // Not awaited: answering takes a few seconds and shouldn't delay the handlers below.
