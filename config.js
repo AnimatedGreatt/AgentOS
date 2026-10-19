@@ -45,7 +45,7 @@ module.exports = {
   EVENT_GUILD_ID: cleanId(process.env.EVENT_GUILD_ID) || "1041577710067138560",
   EVENT_SCHEDULE_CHANNEL_ID: cleanId(process.env.EVENT_SCHEDULE_CHANNEL_ID) || "1507477905951690854",
   EVENT_OPERATIONS_CHANNEL_ID: cleanId(process.env.EVENT_OPERATIONS_CHANNEL_ID) || "1490285605085515896",
-  EVENT_PANEL_URL: process.env.EVENT_PANEL_URL || "https://animatedgreatt.github.io/event-panel.html",
+  EVENT_PANEL_URL: process.env.EVENT_PANEL_URL || "https://agent-os.team/event-panel.html",
   EVENT_CREATOR_ROLE_IDS: process.env.EVENT_CREATOR_ROLE_IDS || "1449861438012133566,1515073280883687475",
   EVENT_HOST_ROLE_IDS: process.env.EVENT_HOST_ROLE_IDS || "1449861438012133566,1515073017804361728",
   // Optional: role IDs that can host only Court Martial preset events.
@@ -184,7 +184,7 @@ module.exports = {
   // Guild ID where exam reviewers are members (used for OAuth role verification)
   EXAM_GUILD_ID: cleanId(process.env.EXAM_GUILD_ID) || "1041577710067138560",
   // Public base URL for the web grading UI (e.g. https://grading.example.com)
-  EXAM_WEB_BASE_URL: process.env.EXAM_WEB_BASE_URL || "https://animatedgreatt.github.io",
+  EXAM_WEB_BASE_URL: process.env.EXAM_WEB_BASE_URL || "https://agent-os.team",
   // Path on EXAM_WEB_BASE_URL where the AoS section is hosted
   AOS_WEB_PATH: process.env.AOS_WEB_PATH || '/aos-profile.html',
   // DB exam update poll fallback controls (used with LISTEN/NOTIFY)
