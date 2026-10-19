@@ -91,7 +91,7 @@ function buildAosWebUrlForUsername(username) {
   if (!baseRaw) return null;
 
   const base = baseRaw.replace(/\/$/, '');
-  const path = String(config.AOS_WEB_PATH || '/aos.html').trim() || '/aos.html';
+  const path = String(config.AOS_WEB_PATH || '/aos-profile').trim() || '/aos-profile';
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
   const safeUsername = encodeURIComponent(String(username || '').trim());
   return `${base}${normalizedPath}?username=${safeUsername}`;

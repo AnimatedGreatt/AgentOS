@@ -314,7 +314,7 @@ async function handleXpAuditLogMessage(message, client) {
   const embed = new EmbedBuilder()
     .setTitle('AOS Alert')
     .setColor(0xed4245)
-    .setDescription(`User [${username}](${aosPageUrl || 'https://agent-os.team/dashboard.html'}) with ${count} outstanding warrant${count === 1 ? '' : 's'} has been detected online at ${currentTime}. Please respond.`)
+    .setDescription(`User [${username}](${aosPageUrl || 'https://agent-os.team/dashboard'}) with ${count} outstanding warrant${count === 1 ? '' : 's'} has been detected online at ${currentTime}. Please respond.`)
     .setFooter({ text: 'XP Monitor' });
 
   if (aosPageUrl) embed.setURL(aosPageUrl);

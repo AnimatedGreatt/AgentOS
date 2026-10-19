@@ -1023,7 +1023,7 @@ else {
     const safeMessage = escapeHtml(message);
     const safeStatusLabel = escapeHtml(statusLabel || 'Verification');
     const homeBase = String(config.EXAM_WEB_BASE_URL || 'https://agent-os.team').trim().replace(/\/+$/, '');
-    const homeUrl = `${homeBase}/index.html`;
+    const homeUrl = `${homeBase}/`;
 
     return `<!doctype html>
 <html lang="en">

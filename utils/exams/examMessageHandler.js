@@ -140,7 +140,7 @@ async function handleExamDM(message, client) {
   if (config.EXAM_WEB_BASE_URL) {
     const base = String(config.EXAM_WEB_BASE_URL).replace(/\/$/, '');
     // Send graders to the dashboard page for web-based grading.
-    const url = `${base}/exams.html`;
+    const url = `${base}/exams`;
     const linkBtn = new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel('Open Dashboard (Web)')
       .setURL(url);
     rows.push(new ActionRowBuilder().addComponents(linkBtn));
