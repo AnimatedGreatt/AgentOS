@@ -74,8 +74,6 @@ module.exports = {
   DATABASE_URL: process.env.DATABASE_URL || undefined,
   // Optional: GitHub repo to pull latest commit from (format: owner/repo)
   GITHUB_REPO: process.env.GITHUB_REPO || "legobeerus/AgentOS",
-  // Optional: GitHub token to increase API rate limits (optional)
-  GITHUB_TOKEN: process.env.GITHUB_TOKEN || undefined,
   
   // Optional: Google Sheets lookup for background checks
   // Set GOOGLE_SHEET_ID and GOOGLE_SHEETS_API_KEY in your environment to enable
@@ -179,8 +177,6 @@ module.exports = {
   EXAM_PASS_THRESHOLD: process.env.EXAM_PASS_THRESHOLD !== undefined ? Number(process.env.EXAM_PASS_THRESHOLD) : 75,
   // Default time limit in seconds applied to exams if not specified per-exam
   EXAM_TIME_LIMIT_SECONDS: process.env.EXAM_TIME_LIMIT_SECONDS !== undefined ? Number(process.env.EXAM_TIME_LIMIT_SECONDS) : 86400,
-  // Short-lived secret token for web grading endpoints (optional)
-  EXAM_REVIEW_SECRET: process.env.EXAM_REVIEW_SECRET || undefined,
   // Guild ID where exam reviewers are members (used for OAuth role verification)
   EXAM_GUILD_ID: cleanId(process.env.EXAM_GUILD_ID) || "1041577710067138560",
   // Public base URL for the web grading UI (e.g. https://grading.example.com)

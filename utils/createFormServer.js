@@ -709,16 +709,9 @@ function createFormServer(client) {
   const examStore = require('./exams/examStore');
   const { processGrade } = require('./exams/handleExamGrade');
 
-  // Auth middleware: accept either EXAM_REVIEW_SECRET or a Discord OAuth access token
+  // Auth middleware: require a Discord OAuth access token from a member with the exam reviewer role
   async function requireExamAuth(req, res, next) {
-    const secret = config.EXAM_REVIEW_SECRET;
-    const auth = (req.get('authorization') || '').trim();
-    console.debug && console.debug(`requireExamAuth: incoming auth header present=${!!auth}, x-discord-token present=${!!req.get('x-discord-token')}`);
-    if (secret && auth === `Bearer ${secret}`) {
-      req.reviewer = { tag: 'web' };
-      return next();
-    }
-
+    console.debug && console.debug(`requireExamAuth: x-discord-token present=${!!req.get('x-discord-token')}`);
     // Try Discord OAuth token in header 'x-discord-token'
     const discordToken = req.get('x-discord-token') || req.body?.discord_token;
     if (!discordToken) return res.status(401).json({ error: 'Unauthorized' });

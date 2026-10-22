@@ -33,8 +33,6 @@ async function _fetchLatestVersionFromGitHub() {
       'Accept': 'application/vnd.github+json',
       'User-Agent': 'AgentOS-Changelog'
     };
-    const token = process.env.GITHUB_TOKEN || config.GITHUB_TOKEN;
-    if (token) headers['Authorization'] = `token ${token}`;
     const res = await axios.get(url, { headers, timeout: 5000 });
     if (!res.data || !Array.isArray(res.data) || res.data.length === 0) return null;
     const commit = res.data[0];
