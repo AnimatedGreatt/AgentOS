@@ -188,6 +188,27 @@ function createFormServer(client) {
     return null;
   }
 
+  const BLOCKED_APPLICATION_MESSAGES = {
+    blacklist: "You are permanently blacklisted and cannot apply. If you wish to appeal your blacklist, join the main server and open an OSI ticket.",
+    spam: "Your application was detected as spam and was not posted for review. Please answer every question properly before resubmitting.",
+    too_short: `Your application was too short and was not posted for review. Every written answer must be at least ${config.APPLICATION_MIN_ANSWER_CHARS} characters long.`
+  };
+
+  async function notifyApplicationBlocked(client, channel, answers, reason) {
+    try {
+      const applicantUser = await resolveApplicantUser(client, channel, answers).catch(() => null);
+      if (!applicantUser) return;
+      const embed = new EmbedBuilder()
+        .setTitle("Your application has been blocked")
+        .setDescription(BLOCKED_APPLICATION_MESSAGES[reason])
+        .setColor(0xED4245)
+        .setTimestamp();
+      await applicantUser.send({ embeds: [embed] }).catch(() => null);
+    } catch (err) {
+      console.warn(`Failed to notify applicant about blocked application (${reason}):`, err);
+    }
+  }
+
   function requireBotApiAuth(req, res, next) {
     const token = extractApiToken(req);
     const preferredToken = config.BOT_API_TOKEN;
@@ -256,40 +277,6 @@ function createFormServer(client) {
         console.warn('Failed to check paused state, continuing submission flow:', err);
       }
 
-      // Anti-spam: detect low-effort and repeated-pattern application spam
-      try {
-        const spamCheck = analyzeSpamAnswers(answers, {
-          minTotalChars: config.APPLICATION_SPAM_MIN_TOTAL_CHARS,
-          minLongAnswerChars: config.APPLICATION_SPAM_MIN_LONG_ANSWER_CHARS,
-          minLongAnswerCount: config.APPLICATION_SPAM_MIN_LONG_ANSWER_COUNT,
-          maxShortLongAnswerRatio: config.APPLICATION_SPAM_MAX_SHORT_LONG_RATIO,
-          duplicateLongAnswerThreshold: config.APPLICATION_SPAM_DUPLICATE_LONG_ANSWER_THRESHOLD,
-          trustTotalCharsBypass: config.APPLICATION_SPAM_TRUST_TOTAL_CHARS_BYPASS
-        });
-
-        if (spamCheck.isSpam) {
-          console.warn("Blocked application: spam filter triggered", {
-            reasons: spamCheck.reasons,
-            metrics: spamCheck.metrics
-          });
-
-          try {
-            const channelId = config.VOTING_CHANNEL_ID;
-            const channel = await client.channels.fetch(channelId).catch(() => null);
-            const applicantUser = await resolveApplicantUser(client, channel, answers).catch(() => null);
-            if (applicantUser) {
-              await applicantUser.send('Your application was rejected by the anti-spam filter and was not posted for review. If you believe this was a mistake, please contact staff before resubmitting.').catch(() => null);
-            }
-          } catch (dmErr) {
-            console.warn('Failed to notify applicant about spam-filter rejection:', dmErr);
-          }
-
-          return res.status(200).json({ success: false, message: "Blocked by spam filter" });
-        }
-      } catch (err) {
-        console.warn("Spam filter check failed, continuing:", err);
-      }
-
       // Use VOTING_CHANNEL_ID from config
       const channelId = config.VOTING_CHANNEL_ID;
 
@@ -341,23 +328,28 @@ function createFormServer(client) {
             const entry = await findBlacklistEntry({ robloxUsername, robloxUserId });
             if (entry) {
               // Found a blocking blacklist entry (temporary/permanent)
-              try {
-                const userToDm = await resolveApplicantUser(client, channel, answers);
-
-                if (userToDm) {
-                  const notifyMsg = `Your application was not sent, as the username "${robloxUsername}" is blacklisted. Your blacklist is ${entry.type} and ends at ${entry.endDate || '(no end date listed)'}, the reason is listed as: "${entry.reason || '(no reason provided)'}"`;
-                  await userToDm.send(notifyMsg).catch(() => null);
-                }
-              } catch (err) {
-                console.warn("Failed to DM blacklisted applicant:", err);
-              }
-
+              await notifyApplicationBlocked(client, channel, answers, 'blacklist');
               console.warn(`Blocked application from blacklisted username: ${robloxUsername} — ${entry.type}`);
               return res.status(200).json({ success: false, message: "Blocked by blacklist" });
             }
           } catch (err) {
             console.warn('Blacklist sheet lookup failed, continuing with application flow:', err);
           }
+        }
+
+        // Anti-spam: every written answer must be long enough and not repetitive junk
+        try {
+          const spamCheck = analyzeSpamAnswers(answers, { minAnswerChars: config.APPLICATION_MIN_ANSWER_CHARS });
+          if (spamCheck.isSpam) {
+            console.warn("Blocked application: spam filter triggered", {
+              reason: spamCheck.reason,
+              flagged: spamCheck.flagged
+            });
+            await notifyApplicationBlocked(client, channel, answers, spamCheck.reason);
+            return res.status(200).json({ success: false, message: "Blocked by spam filter" });
+          }
+        } catch (err) {
+          console.warn("Spam filter check failed, continuing:", err);
         }
 
         // If only username is present, fetch userId
