@@ -217,15 +217,21 @@ async function buildContext({ client, channel, userId, message }) {
   return { memory, replyChain, chat };
 }
 
-// True when a message is one of the assistant's own answers (they carry the "Wrong answer" button).
-function isAiAnswer(msg, botId) {
+// True when a message is the bot's output for a command: a slash command response, or a reply to a `!command`.
+// The assistant's own answers (including public /ask ones) carry the "Wrong answer" button and don't count.
+async function isCommandOutput(msg, botId) {
   if (!msg || !msg.author || msg.author.id !== botId) return false;
-  return (msg.components || []).some(row => (row.components || []).some(c => c.customId && c.customId.startsWith('ai_fb:')));
+  const isAiAnswer = (msg.components || []).some(row => (row.components || []).some(c => c.customId && c.customId.startsWith('ai_fb:')));
+  if (isAiAnswer) return false;
+  if (msg.interactionMetadata || msg.interaction) return true;
+  if (!msg.reference || !msg.reference.messageId) return false;
+  const trigger = await msg.fetchReference().catch(() => null);
+  return !!trigger && /(^|\s)![a-zø]/i.test(stripBotMention(trigger.content, botId));
 }
 
 /**
- * Answers questions asked by @mentioning the bot, or by replying (ping on) to one of its answers.
- * Replies to other bot messages (command output, event schedules, operations posts) are ignored.
+ * Answers questions asked by @mentioning the bot (or replying to it with ping on).
+ * Reply pings to the bot's command output (slash or `!command` responses) are ignored.
  * Messages containing a `!command` are left to messageCommands.js, except `!ai`.
  */
 async function handleAiMention(message, client) {
@@ -234,10 +240,11 @@ async function handleAiMention(message, client) {
 
   const explicitMention = new RegExp(`<@!?${client.user.id}>`).test(message.content);
   if (!explicitMention) {
-    // Only a reply ping: answer follow-ups to the assistant, not replies to any other bot message.
-    if (!message.reference || !message.reference.messageId) return;
-    const referenced = await message.fetchReference().catch(() => null);
-    if (!isAiAnswer(referenced, client.user.id)) return;
+    // Only a reply ping: ignore replies to command output.
+    const referenced = message.reference && message.reference.messageId
+      ? await message.fetchReference().catch(() => null)
+      : null;
+    if (await isCommandOutput(referenced, client.user.id)) return;
   }
 
   const content = stripBotMention(message.content, client.user.id);
