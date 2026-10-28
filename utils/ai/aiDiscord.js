@@ -217,13 +217,28 @@ async function buildContext({ client, channel, userId, message }) {
   return { memory, replyChain, chat };
 }
 
+// True when a message is one of the assistant's own answers (they carry the "Wrong answer" button).
+function isAiAnswer(msg, botId) {
+  if (!msg || !msg.author || msg.author.id !== botId) return false;
+  return (msg.components || []).some(row => (row.components || []).some(c => c.customId && c.customId.startsWith('ai_fb:')));
+}
+
 /**
- * Answers questions asked by @mentioning the bot (or replying to it with ping on).
+ * Answers questions asked by @mentioning the bot, or by replying (ping on) to one of its answers.
+ * Replies to other bot messages (command output, event schedules, operations posts) are ignored.
  * Messages containing a `!command` are left to messageCommands.js, except `!ai`.
  */
 async function handleAiMention(message, client) {
   if (message.author.bot || !message.guild) return;
   if (!message.mentions || !message.mentions.users || !message.mentions.users.has(client.user.id)) return;
+
+  const explicitMention = new RegExp(`<@!?${client.user.id}>`).test(message.content);
+  if (!explicitMention) {
+    // Only a reply ping: answer follow-ups to the assistant, not replies to any other bot message.
+    if (!message.reference || !message.reference.messageId) return;
+    const referenced = await message.fetchReference().catch(() => null);
+    if (!isAiAnswer(referenced, client.user.id)) return;
+  }
 
   const content = stripBotMention(message.content, client.user.id);
   if (/^!ai\b/i.test(content)) {
