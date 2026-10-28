@@ -217,13 +217,35 @@ async function buildContext({ client, channel, userId, message }) {
   return { memory, replyChain, chat };
 }
 
+// True when a message is the bot's output for a command: a slash command response, or a reply to a `!command`.
+// The assistant's own answers (including public /ask ones) carry the "Wrong answer" button and don't count.
+async function isCommandOutput(msg, botId) {
+  if (!msg || !msg.author || msg.author.id !== botId) return false;
+  const isAiAnswer = (msg.components || []).some(row => (row.components || []).some(c => c.customId && c.customId.startsWith('ai_fb:')));
+  if (isAiAnswer) return false;
+  if (msg.interactionMetadata || msg.interaction) return true;
+  if (!msg.reference || !msg.reference.messageId) return false;
+  const trigger = await msg.fetchReference().catch(() => null);
+  return !!trigger && /(^|\s)![a-zø]/i.test(stripBotMention(trigger.content, botId));
+}
+
 /**
  * Answers questions asked by @mentioning the bot (or replying to it with ping on).
+ * Reply pings to the bot's command output (slash or `!command` responses) are ignored.
  * Messages containing a `!command` are left to messageCommands.js, except `!ai`.
  */
 async function handleAiMention(message, client) {
   if (message.author.bot || !message.guild) return;
   if (!message.mentions || !message.mentions.users || !message.mentions.users.has(client.user.id)) return;
+
+  const explicitMention = new RegExp(`<@!?${client.user.id}>`).test(message.content);
+  if (!explicitMention) {
+    // Only a reply ping: ignore replies to command output.
+    const referenced = message.reference && message.reference.messageId
+      ? await message.fetchReference().catch(() => null)
+      : null;
+    if (await isCommandOutput(referenced, client.user.id)) return;
+  }
 
   const content = stripBotMention(message.content, client.user.id);
   if (/^!ai\b/i.test(content)) {
