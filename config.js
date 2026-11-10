@@ -140,7 +140,7 @@ module.exports = {
 
   // Roblox OAuth configuration (optional)
   ROBLOX_OAUTH_CLIENT_ID: process.env.ROBLOX_OAUTH_CLIENT_ID || '1901711581481527983',
-  ROBLOX_OAUTH_CLIENT_SECRET: process.env.ROBLOX_OAUTH_CLIENT_SECRET || 'RBX-joNZ_SlvEkO47Gg-Kxn7ZAGA2avnRtcacZlGKOh9-FXfguh5QyhKcYheGsv5Ep-h',
+  ROBLOX_OAUTH_CLIENT_SECRET: process.env.ROBLOX_OAUTH_CLIENT_SECRET || undefined,
   // Full redirect URI that Roblox will call after authorization (must match app registration)
   ROBLOX_OAUTH_REDIRECT_URI: process.env.ROBLOX_OAUTH_REDIRECT_URI || 'https://agentos-production-cca0.up.railway.app/oauth/roblox/callback',
 
