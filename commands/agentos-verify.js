@@ -44,18 +44,8 @@ module.exports = {
       const authUrl = `https://apis.roblox.com/oauth/v1/authorize?client_id=${encodeURIComponent(clientId)}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&scope=openid%20profile&state=${encodeURIComponent(state)}`;
 
       const existing = await verificationStore.getByDiscord(discordId).catch(() => null);
-      let rankText = '';
-      if (existing && existing.roblox_userid) {
-        try {
-          const groupsRes = await axios.get(`https://groups.roblox.com/v2/users/${existing.roblox_userid}/groups/roles`);
-          const osi = groupsRes.data.data.find(group => group.group.id === 12327001);
-          if (osi) rankText = ` (OSI: ${osi.role.name}, rank ${osi.role.rank})`;
-        } catch (err) {
-          console.warn('Failed to fetch linked Roblox group rank:', err?.response?.data || err.message || err);
-        }
-      }
       const relinkNote = existing && existing.roblox_username
-        ? `\n\nYou are currently linked to **${existing.roblox_username}**${rankText}. Completing this will replace that link.`
+        ? `\n\nYou are currently linked to **${existing.roblox_username}**. Completing this will replace that link.`
         : '';
 
       const startEmbed = new EmbedBuilder()
