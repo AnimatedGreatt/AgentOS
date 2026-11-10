@@ -70,6 +70,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName("suspension-add")
     .setDescription("Add a suspension card to Trello")
+    .setDMPermission(false)
     .addStringOption(option =>
       option
         .setName("title")

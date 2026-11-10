@@ -128,6 +128,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('events')
     .setDescription('Manage scheduled events and operations setup')
+    .setDMPermission(false)
     .addSubcommand((sub) => sub
       .setName('add')
       .setDescription('Add a scheduled event')

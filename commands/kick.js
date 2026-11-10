@@ -16,6 +16,7 @@ async function ensureCommandAccess(interaction) {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('kick')
+    .setDMPermission(false)
     .setDescription('Kick a user from one configured server and strip configured roles in another server')
     .addUserOption(option =>
       option

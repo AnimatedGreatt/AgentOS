@@ -47,6 +47,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('update')
     .setDescription("Update a user's SGC rank on the sheet from Roblox")
+    .setDMPermission(false)
     .addStringOption(o => o.setName('username').setDescription('Roblox username to update').setRequired(true)),
 
   async execute(interaction) {
