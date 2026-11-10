@@ -35,7 +35,6 @@ module.exports = {
         .addChoices(
           { name: 'Add', value: 'add' },
           { name: 'Subtract', value: 'subtract' },
-          { name: 'Set weekly time', value: 'set' }
         )
     )
     .addStringOption(option =>
