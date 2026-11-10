@@ -43,6 +43,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('points')
     .setDescription('Modify verified users points on the configured Google Sheet')
+    .setDMPermission(false)
     .addStringOption(o =>
       o.setName('operation')
        .setDescription('Operation to perform')

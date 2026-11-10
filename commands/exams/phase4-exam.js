@@ -3,7 +3,11 @@ const config = require('../../config');
 const verificationStore = require('../../utils/verification/verificationStore');
 
 module.exports = {
-  data: new SlashCommandBuilder().setName('phase4-exam').setDescription('Request the Phase 4 Master Examination'),
+  data: new SlashCommandBuilder()
+    .setName('phase4-exam')
+    .setDMPermission(false)
+    .setDescription('Request the Phase 4 Master Examination'),
+    
   async execute(interaction) {
     await interaction.deferReply({ ephemeral: true });
 

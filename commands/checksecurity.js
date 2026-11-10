@@ -35,6 +35,7 @@ const ALLOWED_USER_IDS = [
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("checksecurity")
+    .setDMPermission(false)
     .setDescription("(HC Restricted) Check if group members are in hostile or blacklisted factions")
     .addIntegerOption(option =>
       option

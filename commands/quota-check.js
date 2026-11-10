@@ -238,6 +238,7 @@ async function resolveQuotaChannelAndPermission(interaction, channelId, required
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("quota-check")
+    .setDMPermission(false)
     .setDescription("Run a weekly quota check and post a report to the configured channel (ASK BEFORE USE)"),
 
   async execute(interaction) {

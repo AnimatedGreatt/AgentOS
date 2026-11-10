@@ -218,6 +218,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('aos')
     .setDescription('Manage Arrest-On-Sight forum warrants')
+    .setDMPermission(false)
     .addSubcommand(sub =>
       sub
         .setName('add')
