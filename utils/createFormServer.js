@@ -1248,14 +1248,14 @@ else {
       }
 
       const syncMessage = rankSync.status === 'allg'
-        ? `perfect.`
+        ? ` perfect.`
         : rankSync.status === 'ranknotfound'
-          ? `rank is still not there bro`
+          ? ` rank is still not there bro`
           : rankSync.status === 'nogroup'
-            ? 'you aint in no group'
+            ? ' you aint in no group'
             : rankSync.status === 'noserver'
-              ?'no server weird error trust'
-              :'my powas not there';
+              ?' no server weird error trust'
+              :' my powas not there';
 
       // Notify the user via DM if possible
       try {

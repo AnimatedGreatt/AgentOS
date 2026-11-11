@@ -19,17 +19,17 @@
     {
       "name": "Department of Administration",
       "roleid": "",
-      "prefix": ""
+      "prefix": "DA"
     },
     {
       "name": "Department of Field Operations",
       "roleid": "",
-      "prefix": ""
+      "prefix": "DFO"
     },
     {
       "name": "Department of Engineering",
-      "roleid": "",
-      "prefix": ""
+      "roleid": "1540831424251170908",
+      "prefix": "DE"
     }
   ]
 }
