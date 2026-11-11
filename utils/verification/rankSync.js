@@ -1,5 +1,6 @@
 const axios = require('axios');
 const rankConfig = require('../../rankconfig.json');
+const verificationStore = require('./verificationStore');
 
 function normalize(value) {
   return String(value || '').trim().toLowerCase();
@@ -46,13 +47,7 @@ async function depprefixes(member, rank) {
 
 async function syncmember(client, { discordId, robloxUserId, robloxUsername }) {
   const guild = await client.guilds.fetch(rankConfig.testserver);
-  let member;
-  try {
-    member = await guild.members.fetch(discordId);
-  } catch (err) {
-    if (err.code === 10007) return { status: 'noserver' };
-    throw err;
-  }
+  const member = await guild.members.fetch(discordId);
 
   const response = await axios.get(
     `https://groups.roblox.com/v2/users/${encodeURIComponent(robloxUserId)}/groups/roles`
@@ -98,4 +93,47 @@ async function syncmember(client, { discordId, robloxUserId, robloxUsername }) {
   };
 }
 
-module.exports = { syncmember };
+async function syncdepartment(member) {
+  const verification = await verificationStore.getByDiscord(member.id);
+  if (!verification || !verification.roblox_userid) return { status: 'unverified' };
+
+  const response = await axios.get(
+    `https://groups.roblox.com/v2/users/${encodeURIComponent(verification.roblox_userid)}/groups/roles`
+  );
+  const groups = Array.isArray(response.data?.data) ? response.data.data : [];
+  const membership = groups.find(group => Number(group.group?.id) === Number(rankConfig.osigroup));
+
+  if (!membership) {
+    const nickname = await update(member, verification.roblox_username);
+    return { status: 'nogroup', nickname };
+  }
+
+  const rankName = String(membership.role?.name || '').trim();
+  const rankMapping = rankConfig.rankmap.find(mapping => normalize(mapping.name) === normalize(rankName));
+  const rankPrefix = rankMapping ? String(rankMapping.prefix || '').trim() : '';
+  const departmentPrefixes = await depprefixes(member, membership.role?.rank);
+  const nickname = await update(
+    member,
+    verification.roblox_username,
+    rankPrefix,
+    departmentPrefixes
+  );
+
+  return { status: 'updated', nickname };
+}
+
+async function syncroleupdate(oldMember, newMember) {
+  if (newMember.guild.id !== String(rankConfig.testserver)) return null;
+
+  const departmentids = rankConfig.departmentmap
+    .map(department => department.roleid)
+    .filter(roleidvalidation);
+  const departmentchange = departmentids.some(roleId =>
+    oldMember.roles.cache.has(roleId) !== newMember.roles.cache.has(roleId)
+  );
+  if (!departmentchange) return null;
+
+  return syncdepartment(newMember);
+}
+
+module.exports = { syncmember, syncroleupdate };

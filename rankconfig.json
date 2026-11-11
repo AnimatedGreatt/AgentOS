@@ -9,26 +9,56 @@
       "prefix": "SC"
     },
     {
-      "name": "Special Agent-in-Charge",
+      "name": "Assistant Section Chief",
+      "roleid": "1570076296636137565",
+      "prefix": "ASC"
+    },
+    {
+      "name": "Section Supervisor",
       "roleid": "1570036412370395146",
-      "prefix": "SAC"
+      "prefix": "SS"
+    },
+    {
+      "name": "Special Agent-in-Charge",
+      "roleid": "1570076288645988392",
+      "prefix": "SAIC"
+    },
+    {
+      "name": "Senior Special Agent",
+      "roleid": "",
+      "prefix": "SSA"
+    },
+    {
+      "name": "Special Agent",
+      "roleid": "",
+      "prefix": "SA"
+    },
+    {
+      "name": "Junior Special Agent",
+      "roleid": "",
+      "prefix": "JSA"
+    },
+    {
+      "name": "Special Agent-in-Training",
+      "roleid": "",
+      "prefix": "SAIT"
     }
   ],
   "departmentnickname": "Special Agent-in-Charge",
   "departmentmap": [
     {
       "name": "Department of Administration",
-      "roleid": "",
+      "roleid": "1570076612245061743",
       "prefix": "DA"
     },
     {
       "name": "Department of Field Operations",
-      "roleid": "",
+      "roleid": "1570076608331649074",
       "prefix": "DFO"
     },
     {
       "name": "Department of Engineering",
-      "roleid": "1540831424251170908",
+      "roleid": "1570076600538767480",
       "prefix": "DE"
     }
   ]

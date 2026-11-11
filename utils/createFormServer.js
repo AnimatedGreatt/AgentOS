@@ -1253,9 +1253,7 @@ else {
           ? ` rank is still not there bro`
           : rankSync.status === 'nogroup'
             ? ' you aint in no group'
-            : rankSync.status === 'noserver'
-              ?' no server weird error trust'
-              :' my powas not there';
+            :' my powas not there';
 
       // Notify the user via DM if possible
       try {
