@@ -1,0 +1,35 @@
+{
+  "testserver": "1540828031864803410",
+  "osigroup": 12327001,
+  "baseroles": [],
+  "rankmap": [
+    {
+      "name": "Section Chief",
+      "roleid": "1570036367612842186",
+      "prefix": "SC"
+    },
+    {
+      "name": "Special Agent-in-Charge",
+      "roleid": "1570036412370395146",
+      "prefix": "SAC"
+    }
+  ],
+  "departmentnickname": "Special Agent-in-Charge",
+  "departmentmap": [
+    {
+      "name": "Department of Administration",
+      "roleid": "",
+      "prefix": ""
+    },
+    {
+      "name": "Department of Field Operations",
+      "roleid": "",
+      "prefix": ""
+    },
+    {
+      "name": "Department of Engineering",
+      "roleid": "",
+      "prefix": ""
+    }
+  ]
+}

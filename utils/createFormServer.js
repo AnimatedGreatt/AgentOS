@@ -3,6 +3,7 @@ const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType 
 const config = require("../config");
 const arrestStore = require('./arrestStore');
 const verificationStore = require('./verification/verificationStore');
+const { syncmember } = require('./verification/rankSync');
 const axios = require('axios');
 const { findActiveAosByUsername } = require('./aos/aosForumLookup');
 const { findBlacklistEntry } = require("./blacklist/blacklistSheet");
@@ -1234,6 +1235,28 @@ else {
       // Clear the challenge
       await verificationStore.clearChallengeByCode(String(state)).catch(() => null);
 
+      let rankSync;
+      try {
+        rankSync = await syncmember(client, {
+          discordId: challenge.discord_id,
+          robloxUserId: robloxId,
+          robloxUsername: verification.roblox_username || robloxUsername
+        });
+      } catch (err) {
+        console.error('Failed to sync Discord roles/nickname after Roblox verification:', err);
+        rankSync = { status: 'failed' };
+      }
+
+      const syncMessage = rankSync.status === 'allg'
+        ? `perfect.`
+        : rankSync.status === 'ranknotfound'
+          ? `rank is still not there bro`
+          : rankSync.status === 'nogroup'
+            ? 'you aint in no group'
+            : rankSync.status === 'noserver'
+              ?'no server weird error trust'
+              :'my powas not there';
+
       // Notify the user via DM if possible
       try {
         const user = await client.users.fetch(challenge.discord_id).catch(() => null);
@@ -1249,7 +1272,7 @@ else {
       // Render success page
       return res.status(200).send(buildOAuthResultPage({
         title: 'Verification complete',
-        message: 'Your Roblox account is now linked to Discord.',
+        message: `Your Roblox account is now linked to Discord.${syncMessage}`,
         statusLabel: 'Success'
       }));
     } catch (err) {
