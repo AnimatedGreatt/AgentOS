@@ -308,15 +308,7 @@ async function endLiveEvent(client, liveEventId, actorUserId, reason) {
         if (msg) {
           const deleted = await msg.delete().then(() => true).catch(() => false);
           if (!deleted) {
-            const rows = [];
-            for (const comp of msg.components || []) {
-              const row = new ActionRowBuilder();
-              for (const child of comp.components || []) {
-                row.addComponents(ButtonBuilder.from(child).setDisabled(true));
-              }
-              rows.push(row);
-            }
-            await msg.edit({ components: rows }).catch(() => null);
+            await msg.edit({ components: [] }).catch(() => null);
           }
         }
       }

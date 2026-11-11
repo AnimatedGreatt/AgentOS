@@ -56,17 +56,21 @@ module.exports = {
 
       const token = `bl_${Date.now().toString(36)}`;
       function makeComponents(p) {
-        const prev = new ButtonBuilder()
-          .setCustomId(`${token}:prev`)
-          .setLabel("◀️ Prev")
-          .setStyle(ButtonStyle.Primary)
-          .setDisabled(p <= 0);
-        const next = new ButtonBuilder()
-          .setCustomId(`${token}:next`)
-          .setLabel("Next ▶️")
-          .setStyle(ButtonStyle.Primary)
-          .setDisabled(p >= totalPages - 1);
-        const row = new ActionRowBuilder().addComponents(prev, next);
+        if (totalPages <= 1) return { components: [] };
+        const buttons = [];
+        if (p > 0) {
+          buttons.push(new ButtonBuilder()
+            .setCustomId(`${token}:prev`)
+            .setLabel("◀️ Prev")
+            .setStyle(ButtonStyle.Primary));
+        }
+        if (p < totalPages - 1) {
+          buttons.push(new ButtonBuilder()
+            .setCustomId(`${token}:next`)
+            .setLabel("Next ▶️")
+            .setStyle(ButtonStyle.Primary));
+        }
+        const row = new ActionRowBuilder().addComponents(...buttons);
         return { components: [row] };
       }
 
@@ -96,12 +100,7 @@ module.exports = {
 
       collector.on("end", async () => {
         try {
-          // disable buttons when finished
-          const disabledRow = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId("disabled_prev").setLabel("◀️ Prev").setStyle(ButtonStyle.Primary).setDisabled(true),
-            new ButtonBuilder().setCustomId("disabled_next").setLabel("Next ▶️").setStyle(ButtonStyle.Primary).setDisabled(true)
-          );
-          await message.edit({ components: [disabledRow] });
+          await message.edit({ components: [] });
         } catch (e) {
           // ignore
         }

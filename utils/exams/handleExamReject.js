@@ -1,4 +1,3 @@
-const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const config = require('../../config');
 
 async function handleExamReject(interaction) {
@@ -12,21 +11,8 @@ async function handleExamReject(interaction) {
       return interaction.followUp({ content: '❌ You are not authorized to reject exams.', ephemeral: true });
     }
 
-    const disabledRow = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId(`exam_authorize:${userId}:${examId}`)
-        .setLabel('Authorize & Start')
-        .setStyle(ButtonStyle.Success)
-        .setDisabled(true),
-      new ButtonBuilder()
-        .setCustomId(`exam_reject:${userId}:${examId}`)
-        .setLabel('Reject')
-        .setStyle(ButtonStyle.Danger)
-        .setDisabled(true)
-    );
-
     try {
-      await interaction.message.edit({ content: `❌ Rejected by ${interaction.user.tag}`, components: [disabledRow] });
+      await interaction.message.edit({ content: `❌ Rejected by ${interaction.user.tag}`, components: [] });
     } catch (e) {
       console.error('Failed to edit rejected exam request message:', e);
     }

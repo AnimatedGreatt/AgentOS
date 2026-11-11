@@ -74,10 +74,10 @@ async function syncmember(client, { discordId, robloxUserId, robloxUsername }) {
   const addRoleIds = [...desiredRoleIds].filter(roleId => !member.roles.cache.has(roleId));
 
   if (removeRoleIds.length) {
-    await member.roles.remove(removeRoleIds, 'Roblox account verification rank sync');
+    await member.roles.remove(removeRoleIds);
   }
   if (addRoleIds.length) {
-    await member.roles.add(addRoleIds, 'Roblox account verification rank sync');
+    await member.roles.add(addRoleIds);
   }
 
   const rankPrefix = rankMapping ? String(rankMapping.prefix || '').trim() : '';

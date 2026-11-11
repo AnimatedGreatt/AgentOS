@@ -97,10 +97,12 @@ module.exports = {
 			}
 			// Send first page and attach navigation buttons if more pages exist.
 			let pageIndex = 0;
-			const makeRow = (idx) => new ActionRowBuilder().addComponents(
-				new ButtonBuilder().setCustomId(`susp_search_prev_${interaction.id}`).setLabel('Prev').setStyle(ButtonStyle.Primary).setDisabled(idx <= 0),
-				new ButtonBuilder().setCustomId(`susp_search_next_${interaction.id}`).setLabel('Next').setStyle(ButtonStyle.Primary).setDisabled(idx >= embeds.length - 1),
-			);
+			const makeRow = (idx) => {
+				const buttons = [];
+				if (idx > 0) buttons.push(new ButtonBuilder().setCustomId(`susp_search_prev_${interaction.id}`).setLabel('Prev').setStyle(ButtonStyle.Primary));
+				if (idx < embeds.length - 1) buttons.push(new ButtonBuilder().setCustomId(`susp_search_next_${interaction.id}`).setLabel('Next').setStyle(ButtonStyle.Primary));
+				return new ActionRowBuilder().addComponents(...buttons);
+			};
 
 			await interaction.editReply({ embeds: [embeds[0]], components: embeds.length > 1 ? [makeRow(0)] : [] });
 			if (embeds.length <= 1) return;
@@ -123,11 +125,7 @@ module.exports = {
 
 			collector.on('end', async () => {
 				try {
-					const disabled = new ActionRowBuilder().addComponents(
-						new ButtonBuilder().setCustomId(`susp_search_prev_${interaction.id}`).setLabel('Prev').setStyle(ButtonStyle.Primary).setDisabled(true),
-						new ButtonBuilder().setCustomId(`susp_search_next_${interaction.id}`).setLabel('Next').setStyle(ButtonStyle.Primary).setDisabled(true),
-					);
-					await interaction.editReply({ components: [disabled] });
+					await interaction.editReply({ components: [] });
 				} catch (e) {
 					// ignore
 				}
