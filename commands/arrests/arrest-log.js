@@ -9,7 +9,7 @@ module.exports = {
     .addStringOption(opt => opt.setName('suspect').setDescription('Roblox username of suspect').setRequired(true))
     .addStringOption(opt => opt.setName('summary').setDescription('Brief description of the incident').setRequired(true))
     .addStringOption(opt => opt.setName('charges').setDescription('List of charges, listed as [X.X] Law Name').setRequired(true))
-    .addStringOption(opt => opt.setName('sentence').setDescription('Time jailed').setRequired(true))
+    .addIntegerOption(opt => opt.setName('sentence').setDescription('Time Jailed').setRequired(true).setMinValue(0))
     .addStringOption(opt => opt.setName('proof').setDescription('Link to media evidence').setRequired(true)),
 
   async execute(interaction) {
@@ -48,7 +48,7 @@ module.exports = {
     const suspect = interaction.options.getString('suspect');
     const summary = interaction.options.getString('summary');
     const charges = interaction.options.getString('charges');
-    const sentence = interaction.options.getString('sentence');
+    const sentence = interaction.options.getInteger('sentence');
     const proof = interaction.options.getString('proof') || '';
 
     try {
@@ -62,13 +62,6 @@ module.exports = {
         submitted_by_tag: interaction.user.tag
       });
 
-      let createdDisplay = 'Unknown';
-      if (record.created_at) {
-        const created = new Date(record.created_at);
-        const ts = Math.floor(created.getTime() / 1000);
-        createdDisplay = `<t:${ts}:f> (<t:${ts}:R>)`;
-      }
-
       const embed = new EmbedBuilder()
         .setTitle(`Arrest Log: ${record.roblox_username}`)
         .setColor(config.EMBED_COLOR)
@@ -76,11 +69,11 @@ module.exports = {
           { name: 'Suspect', value: record.roblox_username, inline: true },
           { name: 'Submitted By', value: `${record.submitted_by_tag} (${record.submitted_by})`, inline: true },
           { name: 'Charges', value: record.charges || 'None', inline: false },
-          { name: 'Sentence', value: record.sentence || 'None', inline: false },
+          { name: 'Sentence', value: `${record.sentence} minutes`, inline: false },
           { name: 'Incident Summary', value: record.incident_summary || 'None', inline: false },
           { name: 'Proof', value: record.proof || 'None', inline: false }
         )
-        .setFooter({ text: `Record ID: ${record.id} • ${createdDisplay}` });
+        .setFooter({ text: `Record ID: ${record.id}` });
 
       // Post to configured arrest channel
       const channel = await interaction.client.channels.fetch(config.ARREST_LOG_CHANNEL_ID).catch(() => null);
