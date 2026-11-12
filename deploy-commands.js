@@ -4,7 +4,7 @@ const fs = require("fs");
 
 const osiserver = "1041577710067138560";
 const developmentserver = "1540828031864803410";
-const sharedcommands = new Set(["time", "points", "kick", "phase1-test", "phase4-exam", "quota-check"]);
+const sharedcommands = new Set(["time", "points", "kick", "phase1-test", "phase4-exam", "quota-check", "cancel-inactivity", "inactivity-notice", "events", "submit", "update"]);
 const developmentcommands = new Set(["agentos-update"]);
 const guildCommandNames = new Set([...sharedcommands, ...developmentcommands]);
 
