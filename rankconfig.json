@@ -1,0 +1,65 @@
+{
+  "testserver": "1540828031864803410",
+  "osigroup": 12327001,
+  "baseroles": [],
+  "rankmap": [
+    {
+      "name": "Section Chief",
+      "roleid": "1570036367612842186",
+      "prefix": "SC"
+    },
+    {
+      "name": "Assistant Section Chief",
+      "roleid": "1570076296636137565",
+      "prefix": "ASC"
+    },
+    {
+      "name": "Section Supervisor",
+      "roleid": "1570036412370395146",
+      "prefix": "SS"
+    },
+    {
+      "name": "Special Agent-in-Charge",
+      "roleid": "1570076288645988392",
+      "prefix": "SAIC"
+    },
+    {
+      "name": "Senior Special Agent",
+      "roleid": "",
+      "prefix": "SSA"
+    },
+    {
+      "name": "Special Agent",
+      "roleid": "",
+      "prefix": "SA"
+    },
+    {
+      "name": "Junior Special Agent",
+      "roleid": "",
+      "prefix": "JSA"
+    },
+    {
+      "name": "Special Agent-in-Training",
+      "roleid": "",
+      "prefix": "SAIT"
+    }
+  ],
+  "departmentnickname": "Special Agent-in-Charge",
+  "departmentmap": [
+    {
+      "name": "Department of Administration",
+      "roleid": "1570076612245061743",
+      "prefix": "DA"
+    },
+    {
+      "name": "Department of Field Operations",
+      "roleid": "1570076608331649074",
+      "prefix": "DFO"
+    },
+    {
+      "name": "Department of Engineering",
+      "roleid": "1570076600538767480",
+      "prefix": "DE"
+    }
+  ]
+}

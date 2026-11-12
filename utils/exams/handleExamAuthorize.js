@@ -1,4 +1,4 @@
-const { ActionRowBuilder, ButtonBuilder, EmbedBuilder, ButtonStyle } = require('discord.js');
+const { EmbedBuilder } = require('discord.js');
 const config = require('../../config');
 const examStore = require('./examStore');
 const verificationStore = require('../verification/verificationStore');
@@ -132,22 +132,10 @@ async function handleExamAuthorize(interaction) {
     await examStore.setDMMessage(sess.id, dm);
     examStore.scheduleExpiration(sess, interaction.client);
 
-    // Disable all buttons on the original message
+    // Remove action buttons from the original message.
     try {
-      const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setCustomId(`exam_authorize:${userId}:${examId}`)
-          .setLabel('Authorize & Start')
-          .setStyle(ButtonStyle.Success)
-          .setDisabled(true),
-        new ButtonBuilder()
-          .setCustomId(`exam_reject:${userId}:${examId}`)
-          .setLabel('Reject')
-          .setStyle(ButtonStyle.Danger)
-          .setDisabled(true)
-      );
-      await interaction.message.edit({ components: [row] });
-    } catch (e) { console.error('Failed to disable authorize button:', e); }
+      await interaction.message.edit({ components: [] });
+    } catch (e) { console.error('Failed to remove exam authorization buttons:', e); }
 
     // Acknowledge to authorizer
     await interaction.followUp({ content: `✅ Authorized and started exam for <@${userId}> (session ${sess.id}).`, ephemeral: true });

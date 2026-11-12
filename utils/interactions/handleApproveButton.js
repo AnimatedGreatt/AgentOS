@@ -1,4 +1,3 @@
-const { ActionRowBuilder, ButtonBuilder } = require("discord.js");
 const config = require("../../config");
 const { addFollowup } = require('../followups/followupStore');
 const { scheduleFollowup } = require('../followups/followupScheduler');
@@ -67,14 +66,7 @@ async function handleApproveButton(interaction) {
     console.error('Failed to persist follow-up entry:', e);
   }
 
-  // Disable the button
-  const disabledRow = new ActionRowBuilder().addComponents(
-    ButtonBuilder.from(interaction.component).setDisabled(true)
-  );
-
-  await interaction.message.edit({
-    components: [disabledRow]
-  });
+  await interaction.message.edit({ components: [] });
 }
 
 module.exports = { handleApproveButton };

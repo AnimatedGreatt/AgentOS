@@ -1,6 +1,7 @@
 require("dotenv").config();
 const { startKeepAlive } = require("./utils/db/dbKeepAlive");
 const verificationStore = require('./utils/verification/verificationStore');
+const { syncroleupdate } = require('./utils/verification/rankSync');
 const arrestStore = require('./utils/arrestStore');
 const aosActiveStore = require('./utils/aos/aosActiveStore');
 const { Client, GatewayIntentBits, Partials } = require("discord.js");
@@ -219,6 +220,13 @@ client.on('guildMemberAdd', async (member) => {
 });
 client.on('guildMemberRemove', async (member) => {
   try { await verifyReminderScheduler.onGuildMemberRemove(member); } catch (e) { console.error('verifyReminderScheduler onGuildMemberRemove failed', e); }
+});
+client.on('guildMemberUpdate', async (oldMember, newMember) => {
+  try {
+    await syncroleupdate(oldMember, newMember);
+  } catch (e) {
+    console.error('Department role nickname sync failed:', e);
+  }
 });
 
 // Interaction handler

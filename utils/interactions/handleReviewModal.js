@@ -37,7 +37,7 @@ async function handleReviewModal(interaction) {
 
   const embed = message.embeds[0];
   const config = require("../../config");
-  const { EmbedBuilder, ChannelType, ActionRowBuilder, ButtonBuilder } = require("discord.js");
+  const { EmbedBuilder, ChannelType } = require("discord.js");
 
   if (!embed) {
     console.error("No embed found in the message");
@@ -58,17 +58,8 @@ async function handleReviewModal(interaction) {
         ]
       };
 
-      // Disable buttons if present
       try {
-        const rows = [];
-        if (message.components && message.components.length) {
-          const comp = message.components[0];
-          const newRow = new ActionRowBuilder();
-          if (comp.components && comp.components[0]) newRow.addComponents(ButtonBuilder.from(comp.components[0]).setDisabled(true));
-          if (comp.components && comp.components[1]) newRow.addComponents(ButtonBuilder.from(comp.components[1]).setDisabled(true));
-          rows.push(newRow);
-        }
-        await message.edit({ embeds: [updatedEmbedObj], components: rows }).catch(() => {});
+        await message.edit({ embeds: [updatedEmbedObj], components: [] }).catch(() => {});
       } catch (e) {
         try { await message.edit({ embeds: [updatedEmbedObj], components: [] }).catch(() => {}); } catch (_) {}
       }

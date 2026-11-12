@@ -2,6 +2,12 @@ require("dotenv").config();
 const { REST, Routes } = require("discord.js");
 const fs = require("fs");
 
+const osiserver = "1041577710067138560";
+const developmentserver = "1540828031864803410";
+const sharedcommands = new Set(["time", "points", "kick", "phase1-test", "phase4-exam", "quota-check"]);
+const developmentcommands = new Set(["agentos-update"]);
+const guildCommandNames = new Set([...sharedcommands, ...developmentcommands]);
+
 const commands = [];
 const commandFiles = fs.readdirSync("./commands", { recursive: true }).filter(file => file.endsWith(".js"));
 
@@ -41,11 +47,28 @@ const applicationId = process.env.APPLICATION_ID || process.env.DISCORD_APPLICAT
 
 (async () => {
   try {
-    console.log("Registering slash commands... :3");
+    const globalcmds = commands.filter(command => !guildCommandNames.has(command.name));
+    const osiservercmds = commands.filter(command => sharedcommands.has(command.name));
+    const developmentservercmds = commands.filter(command =>
+      sharedcommands.has(command.name) || developmentcommands.has(command.name)
+    );
+
+    console.log("Registering slash commands...");
     await rest.put(
       Routes.applicationCommands(applicationId),
-      { body: commands }
+      { body: globalcmds }
     );
+
+    await rest.put(
+      Routes.applicationGuildCommands(applicationId, osiserver),
+      { body: osiservercmds }
+    );
+
+    await rest.put(
+      Routes.applicationGuildCommands(applicationId, developmentserver),
+      { body: developmentservercmds }
+    );
+
     console.log("Commands registered.");
   } catch (error) {
     console.error(error);

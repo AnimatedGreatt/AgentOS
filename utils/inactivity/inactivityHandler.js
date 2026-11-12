@@ -230,8 +230,7 @@ async function handleApprove(interaction) {
 
     // Update message: disable buttons and add approval info
     const updatedEmbed = EmbedBuilder.from(embed).setColor(0x57F287).addFields({ name: 'End Date', value: endDateStr, inline: true }, { name: 'Approved by', value: interaction.user.tag, inline: true });
-    const disabledRow = new ActionRowBuilder().addComponents(ButtonBuilder.from(interaction.component).setDisabled(true), ButtonBuilder.from(interaction.message.components[0].components[1]).setDisabled(true));
-    await interaction.message.edit({ embeds: [updatedEmbed], components: [disabledRow] }).catch(() => {});
+    await interaction.message.edit({ embeds: [updatedEmbed], components: [] }).catch(() => {});
     await interaction.followUp({ content: `✅ Approved. End date ${endDateStr} written to sheet.`, ephemeral: true });
   } catch (err) {
     console.error('Error approving inactivity:', err);

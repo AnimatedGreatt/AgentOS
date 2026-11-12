@@ -201,17 +201,20 @@ function buildAosListEmbed(grouped, page, pageSize) {
 }
 
 function buildAosListComponents(token, page, totalPages) {
-  const prev = new ButtonBuilder()
-    .setCustomId(`${token}:prev`)
-    .setLabel('◀ Prev')
-    .setStyle(ButtonStyle.Primary)
-    .setDisabled(page <= 0);
-  const next = new ButtonBuilder()
-    .setCustomId(`${token}:next`)
-    .setLabel('Next ▶')
-    .setStyle(ButtonStyle.Primary)
-    .setDisabled(page >= totalPages - 1);
-  return [new ActionRowBuilder().addComponents(prev, next)];
+  const buttons = [];
+  if (page > 0) {
+    buttons.push(new ButtonBuilder()
+      .setCustomId(`${token}:prev`)
+      .setLabel('◀ Prev')
+      .setStyle(ButtonStyle.Primary));
+  }
+  if (page < totalPages - 1) {
+    buttons.push(new ButtonBuilder()
+      .setCustomId(`${token}:next`)
+      .setLabel('Next ▶')
+      .setStyle(ButtonStyle.Primary));
+  }
+  return buttons.length ? [new ActionRowBuilder().addComponents(...buttons)] : [];
 }
 
 module.exports = {
@@ -655,11 +658,7 @@ module.exports = {
 
         collector.on('end', async () => {
           try {
-            const disabled = [new ActionRowBuilder().addComponents(
-              new ButtonBuilder().setCustomId('aos_prev_disabled').setLabel('◀ Prev').setStyle(ButtonStyle.Primary).setDisabled(true),
-              new ButtonBuilder().setCustomId('aos_next_disabled').setLabel('Next ▶').setStyle(ButtonStyle.Primary).setDisabled(true)
-            )];
-            await replyMessage.edit({ components: disabled });
+            await replyMessage.edit({ components: [] });
           } catch (endErr) {
             // ignore cleanup failures
           }
