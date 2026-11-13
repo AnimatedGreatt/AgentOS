@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, ContainerBuilder, TextDisplayBuilder, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const axios = require('axios');
 const config = require('../config');
 const arrestStore = require('../utils/arrestStore');
@@ -12,7 +12,7 @@ module.exports = {
 
   async execute(interaction) {
     const username = interaction.options.getString('username');
-    await interaction.deferReply({ flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral });
+    await interaction.deferReply();
 
     try {
       // Resolve username -> userId
@@ -24,14 +24,8 @@ module.exports = {
         // ignore
       }
 
-      const profileLines = [
-        `## BGC for ${username}`,
-        robloxUserId ? `**User ID:** \`${robloxUserId}\`` : `**User:** ${username}`
-      ];
-      const groupLines = ['## Group memberships'];
-      const suspensionLines = ['## Suspensions'];
-      const arrestLines = ['## Arrest log'];
-      const aosLines = ['## Active AoS cases'];
+      // Prepare embed (we'll use the author as the linked username with avatar at top-left)
+      const embed = new EmbedBuilder().setColor(0x00aff1).setFooter({ text: robloxUserId ? `User ID: ${robloxUserId}` : `User: ${username}` });
 
       // Fetch Roblox user info (created date) and avatar
       let avatarUrl = null;
@@ -43,14 +37,14 @@ module.exports = {
             const now = new Date();
             const ageDays = Math.floor((now - created) / (1000 * 60 * 60 * 24));
             const ts = Math.floor(created.getTime() / 1000);
-            profileLines.push(`**Account Age:** <t:${ts}:f> — ${ageDays} day(s)`);
+            embed.addFields({ name: 'Account Age', value: `<t:${ts}:f> — ${ageDays} day(s)`, inline: false });
           }
 
           // username history
           try {
             const hist = (await axios.get(`https://users.roblox.com/v1/users/${robloxUserId}/username-history`)).data || {};
             const names = Array.isArray(hist.data) ? hist.data.map(h => h.name).slice(0, 8) : [];
-            if (names.length) profileLines.push(`**Previous Usernames:** ${names.join(', ')}`);
+            if (names.length) embed.addFields({ name: 'Previous Usernames', value: names.join('\n'), inline: false });
           } catch (e) { /* ignore */ }
 
           // avatar/headshot
@@ -71,7 +65,7 @@ module.exports = {
 
           const sgc = groups.find(g => g.group && Number(g.group.id) === Number(SGC_ID));
           if (sgc) {
-            groupLines.push(`**Stargate Command** — Rank: ${sgc.role.name}`);
+            embed.addFields({ name: 'Stargate Command', value: `Rank: ${sgc.role.name}`, inline: false });
           }
 
           // Find which division groups the user is in and show each as its own field (match SGC format)
@@ -80,7 +74,7 @@ module.exports = {
             for (const g of divisions) {
               const title = `${g.group.name}`;
               const value = `Rank: ${g.role.name}`;
-              groupLines.push(`**${title}** — ${value}`);
+              embed.addFields({ name: title, value, inline: false });
             }
           }
         }
@@ -104,7 +98,7 @@ module.exports = {
           });
           if (matches.length) {
             const shown = matches.slice(0, 6).map(c => `• [${String(c.name||'untitled')}](${c.url})`).join('\n');
-            suspensionLines.push(shown.slice(0, 1000));
+            embed.addFields({ name: 'Suspensions Board Results', value: shown.slice(0, 1000), inline: false });
           }
         }
       } catch (e) { /* ignore */ }
@@ -118,7 +112,7 @@ module.exports = {
               const laws = a.charges || a.incident_summary || a.sentence || '(no laws listed)';
               return `• ${idPart} — ${String(laws).slice(0, 180)}`;
             }).join('\n');
-          arrestLines.push(shown.slice(0, 1000));
+          embed.addFields({ name: 'Arrest Log Matches', value: shown.slice(0, 1000), inline: false });
         }
       } catch (e) { /* ignore */ }
 
@@ -130,20 +124,21 @@ module.exports = {
             .map(m => `• ${m.threadName} (${m.url})`)
             .join('\n');
           const more = aosMatches.length > 6 ? `\n+${aosMatches.length - 6} more` : '';
-          aosLines.push((shown + more).slice(0, 1000));
+          embed.addFields({ name: 'Active AoS Matches', value: (shown + more).slice(0, 1000), inline: false });
         }
       } catch (e) { /* ignore */ }
 
-      const profileUrl = robloxUserId ? `https://www.roblox.com/users/${robloxUserId}/profile` : null;
-      if (profileUrl) profileLines.push(`[Roblox profile](${profileUrl})`);
-      if (avatarUrl) profileLines.push(`[Avatar](${avatarUrl})`);
+      // Set author (top-left) to show linked username and avatar if available
+      try {
+        const profileUrl = robloxUserId ? `https://www.roblox.com/users/${robloxUserId}/profile` : undefined;
+        const authorName = `BGC for ${username}:`;
+        const authorOpts = { name: authorName };
+        if (profileUrl) authorOpts.url = profileUrl;
+        if (avatarUrl) authorOpts.iconURL = avatarUrl;
+        embed.setAuthor(authorOpts);
+      } catch (e) { /* ignore author set errors */ }
 
-      const components = [profileLines, groupLines, suspensionLines, arrestLines, aosLines]
-        .filter(lines => lines.length > 1)
-        .map(lines => new ContainerBuilder().addTextDisplayComponents(
-          new TextDisplayBuilder().setContent(lines.join('\n').slice(0, 3900))
-        ));
-      await interaction.editReply({ components });
+      await interaction.editReply({ embeds: [embed] });
     } catch (err) {
       console.error('background-check failed:', err);
       await interaction.editReply('⚠️ Failed to perform background check.');
