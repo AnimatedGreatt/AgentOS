@@ -18,14 +18,13 @@ module.exports = {
       .setMaxLength(20)),
 
   async execute(interaction) {
-    await interaction.deferReply({
-      flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2
-    });
-
     const progressContainer = new ContainerBuilder().addTextDisplayComponents(
       new TextDisplayBuilder().setContent('## Background check\nChecking Roblox and case records...')
     );
-    await interaction.editReply({ components: [progressContainer] });
+    await interaction.reply({
+      flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
+      components: [progressContainer]
+    });
 
     const username = String(interaction.options.getString('username') || '').trim();
     let robloxUserId;
