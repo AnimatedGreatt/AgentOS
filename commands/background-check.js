@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, ContainerBuilder, TextDisplayBuilder, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, ContainerBuilder, SectionBuilder, TextDisplayBuilder, ThumbnailBuilder, MessageFlags } = require('discord.js');
 const axios = require('axios');
 const config = require('../config');
 const arrestStore = require('../utils/arrestStore');
@@ -68,7 +68,8 @@ module.exports = {
       groupLines,
       suspensionLines,
       arrestLines,
-      aosLines
+      aosLines,
+      avatarUrl
     ] = await Promise.all([
       (async () => {
         try {
@@ -115,10 +116,13 @@ module.exports = {
           const memberships = groups.filter(group =>
             Number(group.group?.id) === mainGroupId || DIVISION_IDS.includes(Number(group.group?.id))
           );
-          if (!memberships.length) return ['No membership found in the configured groups.'];
-          return memberships.map(membership =>
-            `**${String(membership.group?.name || 'Unknown group').slice(0, 100)}** — ${String(membership.role?.name || 'Unknown rank').slice(0, 100)}`
-          );
+          if (!memberships.length) return ['No membership in tracked groups.'];
+          return memberships.map(membership => {
+            const groupId = membership.group.id;
+            const groupName = String(membership.group?.name || 'Unknown group').slice(0, 100);
+            const rankName = String(membership.role?.name || 'Unknown rank').slice(0, 100);
+            return `• **[${groupName}](https://www.roblox.com/communities/${groupId})** — ${rankName}`;
+          });
         } catch (error) {
           console.warn('Background check group lookup failed:', error?.response?.status || error?.message || error);
           return ['⚠️ Roblox group memberships are unavailable.'];
@@ -138,7 +142,7 @@ module.exports = {
             const text = `${card.name || ''}\n${card.desc || ''}`;
             return usernamePattern.test(text) || text.includes(robloxUserId);
           });
-          const lines = [matches.length ? `**${matches.length} match(es)**` : 'No matching records.'];
+          const lines = [matches.length ? `**${matches.length} match(es)**` : 'No suspension records found.'];
           for (const card of matches.slice(0, 5)) {
             const title = String(card.name || 'Untitled').slice(0, 120);
             const labels = Array.isArray(card.labels)
@@ -157,7 +161,7 @@ module.exports = {
       (async () => {
         try {
           const arrests = await arrestStore.getArrestsByRoblox(robloxUsername);
-          const lines = [arrests.length ? `**${arrests.length} record(s)**` : 'No matching records.'];
+          const lines = [arrests.length ? `**${arrests.length} record(s)**` : 'No arrest records found.'];
           for (const arrest of arrests.slice(0, 5)) {
             const date = arrest.created_at
               ? ` • <t:${Math.floor(new Date(arrest.created_at).getTime() / 1000)}:d>`
@@ -180,7 +184,7 @@ module.exports = {
       (async () => {
         try {
           const cases = await findActiveAosByUsername(interaction.client, robloxUsername);
-          const lines = [cases.length ? `**${cases.length} active case(s)**` : 'No active cases found.'];
+          const lines = [cases.length ? `**${cases.length} active case(s)**` : 'No active AoS cases found.'];
           for (const item of cases.slice(0, 5)) {
             lines.push(`• [${String(item.threadName || 'AoS case').slice(0, 140)}](${item.url})`);
           }
@@ -190,22 +194,56 @@ module.exports = {
           console.warn('Background check AoS lookup failed:', error?.message || error);
           return ['⚠️ Active AoS cases are unavailable.'];
         }
+      })(),
+      (async () => {
+        try {
+          const response = await axios.get('https://thumbnails.roblox.com/v1/users/avatar-headshot', {
+            params: { userIds: robloxUserId, size: '150x150', format: 'Png', isCircular: 'false' },
+            timeout: 10000
+          });
+          return response.data?.data?.[0]?.imageUrl || null;
+        } catch (error) {
+          console.warn('Background check avatar lookup failed:', error?.response?.status || error?.message || error);
+          return null;
+        }
       })()
     ]);
 
     profileLines.push(...accountLines, ...usernameLines);
-    const groupSection = ['## Group memberships', ...groupLines];
-    const suspensionSection = ['## Suspensions', ...suspensionLines];
-    const arrestSection = ['## Arrest records', ...arrestLines];
-    const aosSection = ['## Active AoS cases', ...aosLines];
+    const groupSection = ['## Group Data', ...groupLines];
+    const noSuspensions = suspensionLines.length === 1 && suspensionLines[0] === 'No suspension records found.';
+    const noArrests = arrestLines.length === 1 && arrestLines[0] === 'No arrest records found.';
+    const noActiveAosCases = aosLines.length === 1 && aosLines[0] === 'No active AoS cases found.';
+    const recordSections = [];
 
-    const container = new ContainerBuilder().addTextDisplayComponents(
-      new TextDisplayBuilder().setContent(profileLines.join('\n').slice(0, 3900)),
-      new TextDisplayBuilder().setContent(groupSection.join('\n').slice(0, 3900)),
-      new TextDisplayBuilder().setContent(suspensionSection.join('\n').slice(0, 3900)),
-      new TextDisplayBuilder().setContent(arrestSection.join('\n').slice(0, 3900)),
-      new TextDisplayBuilder().setContent(aosSection.join('\n').slice(0, 3900))
-    );
+    if (noSuspensions && noArrests && noActiveAosCases) {
+      recordSections.push(['## Record Checks', 'No suspension records, arrests, or active AoS cases were found for this user.']);
+    } else {
+      if (!noSuspensions) recordSections.push(['## Suspensions', ...suspensionLines]);
+      if (!noArrests) recordSections.push(['## Arrest records', ...arrestLines]);
+      if (!noActiveAosCases) recordSections.push(['## Active AoS cases', ...aosLines]);
+    }
+
+    const container = new ContainerBuilder();
+    if (avatarUrl) {
+      container.addSectionComponents(
+        new SectionBuilder()
+          .addTextDisplayComponents(new TextDisplayBuilder().setContent(profileLines.join('\n').slice(0, 3900)))
+          .setThumbnailAccessory(
+            new ThumbnailBuilder()
+              .setURL(avatarUrl)
+              .setDescription(`${robloxUsername}'s Roblox avatar`)
+          )
+      );
+    } else {
+      container.addTextDisplayComponents(
+        new TextDisplayBuilder().setContent(profileLines.join('\n').slice(0, 3900))
+      );
+    }
+    container.addTextDisplayComponents(new TextDisplayBuilder().setContent(groupSection.join('\n').slice(0, 3900)));
+    for (const section of recordSections) {
+      container.addTextDisplayComponents(new TextDisplayBuilder().setContent(section.join('\n').slice(0, 3900)));
+    }
     return interaction.editReply({ components: [container] });
   }
 };
