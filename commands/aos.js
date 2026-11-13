@@ -226,14 +226,46 @@ module.exports = {
       sub
         .setName('add')
         .setDescription('Create a new AoS forum post')
-        .addStringOption(opt => opt.setName('username').setDescription('Target Roblox username').setRequired(true))
-        .addStringOption(opt => opt.setName('profile').setDescription('Profile link').setRequired(true))
-        .addStringOption(opt => opt.setName('victims').setDescription('Victim username(s)').setRequired(true))
-        .addStringOption(opt => opt.setName('charges').setDescription('Use format: 1x [1.1] Charge').setRequired(true))
-        .addStringOption(opt => opt.setName('summary').setDescription('Summary of offense').setRequired(true))
-        .addStringOption(opt => opt.setName('proof').setDescription('Proof link(s)').setRequired(true))
-        .addStringOption(opt =>
-          opt
+        .addStringOption(option =>
+          option
+            .setName('username')
+            .setDescription('Target Roblox username')
+            .setRequired(true)
+            .setMinLength(3)
+            .setMaxLength(20)
+        )
+        .addStringOption(option =>
+          option
+            .setName('profile')
+            .setDescription('Profile link')
+            .setRequired(true)
+        )
+        .addStringOption(option =>
+          option
+            .setName('victims')
+            .setDescription('Victim username(s)')
+            .setRequired(true)
+        )
+        .addStringOption(option =>
+          option
+            .setName('charges')
+            .setDescription('Use format: 1x [1.1] Charge')
+            .setRequired(true)
+        )
+        .addStringOption(option =>
+          option
+            .setName('summary')
+            .setDescription('Summary of offense')
+            .setRequired(true)
+        )
+        .addStringOption(option =>
+          option
+            .setName('proof')
+            .setDescription('Proof link(s)')
+            .setRequired(true)
+        )
+        .addStringOption(option =>
+          option
             .setName('infraction')
             .setDescription('Optional infraction level tag (1)')
             .setRequired(false)
@@ -243,8 +275,8 @@ module.exports = {
               { name: 'Heavy', value: 'heavy' }
             )
         )
-        .addStringOption(opt =>
-          opt
+        .addStringOption(option =>
+          option
             .setName('infraction_2')
             .setDescription('Optional infraction level tag (2)')
             .setRequired(false)
@@ -254,8 +286,8 @@ module.exports = {
               { name: 'Heavy', value: 'heavy' }
             )
         )
-        .addStringOption(opt =>
-          opt
+        .addStringOption(option =>
+          option
             .setName('infraction_3')
             .setDescription('Optional infraction level tag (3)')
             .setRequired(false)
@@ -265,8 +297,8 @@ module.exports = {
               { name: 'Heavy', value: 'heavy' }
             )
         )
-        .addStringOption(opt =>
-          opt
+        .addStringOption(option =>
+          option
             .setName('reward')
             .setDescription('Optional reward tag')
             .setRequired(false)
@@ -275,8 +307,8 @@ module.exports = {
               { name: 'Requisition', value: 'requisition' }
             )
         )
-        .addBooleanOption(opt =>
-          opt
+        .addBooleanOption(option =>
+          option
             .setName('expires_30_days')
             .setDescription('Apply the 30-day time limit tag')
             .setRequired(false)
@@ -286,8 +318,8 @@ module.exports = {
       sub
         .setName('approve')
         .setDescription('Approve an AoS and ensure it is active')
-        .addStringOption(opt =>
-          opt
+        .addStringOption(option =>
+          option
             .setName('status')
             .setDescription('Final decision for this AoS')
             .setRequired(true)

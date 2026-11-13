@@ -33,6 +33,8 @@ module.exports = {
         .setName("username")
         .setDescription("Roblox username")
         .setRequired(true)
+        .setMinLength(3)
+        .setMaxLength(20)
     ),
 
   async execute(interaction) {

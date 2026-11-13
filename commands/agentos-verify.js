@@ -8,7 +8,14 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('agentos-verify')
     .setDescription('Link (or re-link) your Discord account to a Roblox username')
-    .addStringOption(opt => opt.setName('username').setDescription('Roblox username').setRequired(true)),
+    .addStringOption(option =>
+      option
+        .setName('username')
+        .setDescription('Roblox username')
+        .setRequired(true)
+        .setMinLength(3)
+        .setMaxLength(20)
+    ),
 
   async execute(interaction) {
     const roblox = String(interaction.options.getString('username') || '').trim();

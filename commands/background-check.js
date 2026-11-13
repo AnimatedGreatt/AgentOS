@@ -8,7 +8,14 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('background-check')
     .setDescription('Run a background check on a Roblox username')
-    .addStringOption(opt => opt.setName('username').setDescription('Roblox username to check').setRequired(true).setMinLength(3).setMaxLength(20)),
+    .addStringOption(option =>
+      option
+        .setName('username')
+        .setDescription('Roblox username to check')
+        .setRequired(true)
+        .setMinLength(3)
+        .setMaxLength(20)
+    ),
 
   async execute(interaction) {
     const username = interaction.options.getString('username');

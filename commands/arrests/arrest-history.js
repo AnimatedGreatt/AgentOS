@@ -6,7 +6,14 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('arrest-history')
     .setDescription('Lookup arrest history for a user')
-    .addStringOption(opt => opt.setName('username').setDescription('Roblox username to lookup').setRequired(true)),
+    .addStringOption(option =>
+      option
+        .setName('username')
+        .setDescription('Roblox username to lookup')
+        .setRequired(true)
+        .setMinLength(3)
+        .setMaxLength(20)
+    ),
 
   async execute(interaction) {
     await interaction.deferReply({ ephemeral: true });

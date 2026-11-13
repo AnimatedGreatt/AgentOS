@@ -32,7 +32,9 @@ module.exports = {
             option
                 .setName("suspect")
                 .setDescription("Username of the suspect")
-                .setRequired(true),
+                .setRequired(true)
+                .setMinLength(3)
+                .setMaxLength(20)
         ),
 
         guildOnly: config.GUILD_ID || undefined,
