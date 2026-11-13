@@ -4,7 +4,12 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('inactivity-notice')
     .setDescription('Create an inactivity notice')
-    .addUserOption(opt => opt.setName('user').setDescription('Target user').setRequired(true)),
+    .addUserOption(option =>
+      option
+        .setName('user')
+        .setDescription('Target user')
+        .setRequired(true)
+    ),
 
   async execute(interaction) {
     const target = interaction.options.getUser('user');

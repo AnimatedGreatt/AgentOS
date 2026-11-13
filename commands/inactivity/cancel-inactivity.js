@@ -12,8 +12,15 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('cancel-inactivity')
     .setDescription('Cancel an active inactivity (IN) entry prematurely')
-    .addStringOption(o => o.setName('username').setDescription('Roblox username whose IN to cancel').setRequired(true)),
-  
+    .addStringOption(option =>
+      option
+        .setName('username')
+        .setDescription('Roblox username whose IN to cancel')
+        .setRequired(true)
+        .setMinLength(3)
+        .setMaxLength(20)
+    ),
+
   async execute(interaction) {
     await interaction.deferReply({ ephemeral: true });
 

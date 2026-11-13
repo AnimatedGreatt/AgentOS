@@ -6,11 +6,39 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('arrest-log')
     .setDescription('Log an arrest record')
-    .addStringOption(opt => opt.setName('suspect').setDescription('Roblox username of suspect').setRequired(true))
-    .addStringOption(opt => opt.setName('summary').setDescription('Brief description of the incident').setRequired(true))
-    .addStringOption(opt => opt.setName('charges').setDescription('List of charges, listed as [X.X] Law Name').setRequired(true))
-    .addIntegerOption(opt => opt.setName('sentence').setDescription('Time Jailed').setRequired(true).setMinValue(0))
-    .addStringOption(opt => opt.setName('proof').setDescription('Link to media evidence').setRequired(true)),
+    .addStringOption(option =>
+      option
+        .setName('suspect')
+        .setDescription('Roblox username of suspect')
+        .setRequired(true)
+        .setMinLength(3)
+        .setMaxLength(20)
+    )
+    .addStringOption(option =>
+      option
+        .setName('summary')
+        .setDescription('Brief description of the incident')
+        .setRequired(true)
+    )
+    .addStringOption(option =>
+      option
+        .setName('charges')
+        .setDescription('List of charges, listed as [X.X] Law Name')
+        .setRequired(true)
+    )
+    .addIntegerOption(option =>
+      option
+        .setName('sentence')
+        .setDescription('Time Jailed')
+        .setRequired(true)
+        .setMinValue(0)
+    )
+    .addStringOption(option =>
+      option
+        .setName('proof')
+        .setDescription('Link to media evidence')
+        .setRequired(true)
+    ),
 
   async execute(interaction) {
     await interaction.deferReply({ ephemeral: true });

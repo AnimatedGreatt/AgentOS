@@ -48,7 +48,14 @@ module.exports = {
     .setName('update')
     .setDescription("Update a user's SGC rank on the sheet from Roblox")
     .setDMPermission(false)
-    .addStringOption(o => o.setName('username').setDescription('Roblox username to update').setRequired(true)),
+    .addStringOption(option =>
+       option
+       .setName('username')
+       .setDescription('Roblox username to update')
+       .setRequired(true)
+       .setMinLength(3)
+       .setMaxLength(20)
+    ),
 
   async execute(interaction) {
     await interaction.deferReply({ ephemeral: true });
