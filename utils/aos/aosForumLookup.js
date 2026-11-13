@@ -189,33 +189,34 @@ async function findActiveAosByUsername(client, username) {
 
   const matches = [];
 
-  for (const thread of threads) {
-    try {
-      await enforceAos30DayExpirationForThread(thread);
-    } catch (err) {
-      // ignore mutation failures and continue lookup
-    }
+  for (let i = 0; i < threads.length; i += 5) {
+    const batchMatches = await Promise.all(threads.slice(i, i + 5).map(async thread => {
+      try {
+        await enforceAos30DayExpirationForThread(thread);
+      } catch (err) {
+        // ignore mutation failures and continue lookup
+      }
 
-    const tags = Array.isArray(thread.appliedTags) ? thread.appliedTags.map(String) : [];
-    if (!activeTagId || !tags.includes(activeTagId)) continue;
+      const tags = Array.isArray(thread.appliedTags) ? thread.appliedTags.map(String) : [];
+      if (!activeTagId || !tags.includes(activeTagId)) return null;
 
-    let starter = null;
-    try {
-      starter = await thread.fetchStarterMessage();
-    } catch (err) {
-      starter = await thread.messages.fetch(thread.id).catch(() => null);
-    }
+      let starter = null;
+      try {
+        starter = await thread.fetchStarterMessage();
+      } catch (err) {
+        starter = await thread.messages.fetch(thread.id).catch(() => null);
+      }
 
-    const parsedUsername = parseUsernameField(starter && starter.content ? starter.content : '');
-    if (!parsedUsername) continue;
+      const parsedUsername = parseUsernameField(starter && starter.content ? starter.content : '');
+      if (!parsedUsername || normalizeUsername(parsedUsername) !== target) return null;
 
-    if (normalizeUsername(parsedUsername) !== target) continue;
-
-    matches.push({
-      threadId: thread.id,
-      threadName: thread.name || `AoS ${parsedUsername}`,
-      url: renderThreadUrl(thread.guildId, thread.id)
-    });
+      return {
+        threadId: thread.id,
+        threadName: thread.name || `AoS ${parsedUsername}`,
+        url: renderThreadUrl(thread.guildId, thread.id)
+      };
+    }));
+    matches.push(...batchMatches.filter(Boolean));
   }
 
   return matches;
