@@ -1,111 +1,24 @@
-const axios = require('axios');
-const crypto = require('crypto');
 const rankConfig = require('../../rankconfig.json');
-const serviceAccount = require('../../agentos-c3e04-firebase-adminsdk-fbsvc-ad86efd25e.json');
-const databaseUrl = 'https://agentos-c3e04-default-rtdb.firebaseio.com';
-const encoder = new TextEncoder();
-const oauthTokenUrl = 'https://oauth2.googleapis.com/token';
-const firebaseScope = 'https://www.googleapis.com/auth/firebase.database https://www.googleapis.com/auth/userinfo.email';
-
-let accessToken = null;
-let tokenExpiresAt = 0;
-
-function base64UrlEncode(value) {
-  const bytes = typeof value === 'string' ? encoder.encode(value) : value;
-  let binary = '';
-  for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
-}
-
-function base64ToBytes(value) {
-  const binary = atob(value);
-  return Uint8Array.from(binary, character => character.charCodeAt(0));
-}
+const db = require('../db/firebase');
 
 function responseErrorMessage(error) {
-  const data = error.response?.data;
-  if (typeof data === 'string') return data;
-  if (typeof data?.error === 'string') return data.error_description || data.error;
-  if (data?.error?.message) return data.error.message;
-  if (data?.message) return data.message;
-  return error.message || 'Unknown error';
-}
-
-async function getAccessToken() {
-  if (accessToken && Date.now() < tokenExpiresAt - 60000) return accessToken;
-
-  if (
-    typeof serviceAccount.project_id !== 'string' ||
-    typeof serviceAccount.client_email !== 'string' ||
-    typeof serviceAccount.private_key !== 'string'
-  ) {
-    throw new Error('Firebase service account JSON is missing project_id, client_email, or private_key.');
-  }
-
-  const now = Math.floor(Date.now() / 1000);
-  const header = base64UrlEncode(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
-  const payload = base64UrlEncode(JSON.stringify({
-    iss: serviceAccount.client_email,
-    scope: firebaseScope,
-    aud: oauthTokenUrl,
-    iat: now,
-    exp: now + 3600
-  }));
-  const unsignedToken = `${header}.${payload}`;
-  const privateKey = await crypto.webcrypto.subtle.importKey(
-    'pkcs8',
-    base64ToBytes(serviceAccount.private_key.replace(/-----BEGIN PRIVATE KEY-----|-----END PRIVATE KEY-----|\s/g, '')),
-    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
-  const signature = new Uint8Array(await crypto.webcrypto.subtle.sign(
-    'RSASSA-PKCS1-v1_5',
-    privateKey,
-    encoder.encode(unsignedToken)
-  ));
-  const assertion = `${unsignedToken}.${base64UrlEncode(signature)}`;
-  const tokenResponse = await fetch(oauthTokenUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-      assertion
-    })
-  });
-
-  if (!tokenResponse.ok) {
-    const details = (await tokenResponse.text()).slice(0, 500);
-    throw new Error(`Firebase authentication failed (${tokenResponse.status}): ${details}`);
-  }
-  const tokenResult = await tokenResponse.json();
-  if (typeof tokenResult.access_token !== 'string') {
-    throw new Error('Firebase OAuth token response did not contain an access token.');
-  }
-  accessToken = tokenResult.access_token;
-  tokenExpiresAt = Date.now() + Number(tokenResult.expires_in ?? 3600) * 1000;
-  return accessToken;
+  return error.message || String(error);
 }
 
 async function databaseRequest(method, databasePath, data) {
-  const token = await getAccessToken();
-  const url = `${databaseUrl}/${databasePath}.json`;
-  let response;
   try {
-    response = await axios({
-      method,
-      url,
-      data,
-      headers: { Authorization: `Bearer ${token}` }
-    });
+    const ref = db.ref(databasePath);
+    if (method === 'get') return (await ref.once('value')).val();
+    if (method === 'put') return ref.set(data);
+    if (method === 'patch') return ref.update(data);
+    if (method === 'delete') return ref.remove();
+    throw new Error(`Unsupported Firebase operation: ${method}`);
   } catch (error) {
-    const status = error.response?.status;
     throw new Error(
-      `Firebase ${method.toUpperCase()} ${databasePath} failed${status ? ` (${status})` : ''}: ${responseErrorMessage(error)}`,
+      `Firebase ${method.toUpperCase()} ${databasePath} failed: ${responseErrorMessage(error)}`,
       { cause: error }
     );
   }
-  return response.data;
 }
 
 async function writeWithRollback(databasePath, value, previous) {
