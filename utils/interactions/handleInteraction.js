@@ -4,6 +4,7 @@ const { handleExamAuthorize } = require("../exams/handleExamAuthorize");
 const { handleExamReject } = require("../exams/handleExamReject");
 const { handleGradeButton, handleGradeModalSubmit } = require("../exams/handleExamGrade");
 const verificationStore = require('../verification/verificationStore');
+const { syncmember } = require('../verification/rankSync');
 const axios = require('axios');
 const { handleFormReview } = require("./handleFormReview");
 const { handleReviewModal } = require("./handleReviewModal");
@@ -244,6 +245,15 @@ async function handleInteraction(interaction, client) {
           try {
             const v = await verificationStore.addVerification(username, robloxId, discordId);
             await verificationStore.clearChallenge(username, discordId);
+            try {
+              await syncmember(interaction.client, {
+                discordId,
+                robloxUserId: robloxId,
+                robloxUsername: v.roblox_username
+              });
+            } catch (syncError) {
+              console.error('Failed to sync roles after profile code verification:', syncError);
+            }
             await interaction.editReply({ embeds: [new EmbedBuilder().setTitle('Verification Complete').setColor(0x57F287).setDescription('Verification succeeded — announcing publicly.')] });
             const publicEmbed = new EmbedBuilder()
               .setTitle('AgentOS Verification — Successful')

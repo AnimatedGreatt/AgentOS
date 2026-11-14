@@ -60,7 +60,11 @@ async function addVerification(robloxUsername, robloxUserId, discordId) {
     const previous = existing.rows.find(r => r.discord_id === discordId) || null;
     return { ...res.rows[0], previous_roblox_username: previous ? previous.roblox_username : null };
   } catch (err) {
-    await client.query('ROLLBACK').catch(() => null);
+    try {
+      await client.query('ROLLBACK');
+    } catch (rollbackError) {
+      console.error('Failed to roll back verification write:', rollbackError);
+    }
     throw err;
   } finally {
     client.release();

@@ -1217,14 +1217,15 @@ else {
         }));
       }
 
-      // Persist verification (replaces any previous link for this Discord or Roblox account)
       let verification;
       try {
-        verification = await verificationStore.addVerification(robloxUsername || challenge.roblox_username, robloxId, challenge.discord_id);
+        verification = await verificationStore.addVerification(
+          robloxUsername || challenge.roblox_username,
+          robloxId,
+          challenge.discord_id
+        );
       } catch (err) {
         console.error('Failed to add verification record:', err);
-        // clear the challenge regardless
-        await verificationStore.clearChallengeByCode(String(state)).catch(() => null);
         return res.status(500).send(buildOAuthResultPage({
           title: 'Verification failed',
           message: 'Failed to save the verification. Please run /agentos-verify again.',
@@ -1232,7 +1233,6 @@ else {
         }));
       }
 
-      // Clear the challenge
       await verificationStore.clearChallengeByCode(String(state)).catch(() => null);
 
       let rankSync;
@@ -1248,12 +1248,12 @@ else {
       }
 
       const syncMessage = rankSync.status === 'allg'
-        ? ` perfect.`
+        ? ' Your have been updated.'
         : rankSync.status === 'ranknotfound'
-          ? ` rank is still not there bro`
+          ? ' Something is not properly configured. Contact the Department of Engineering.'
           : rankSync.status === 'nogroup'
-            ? ' you aint in no group'
-            :' my powas not there';
+            ? ' You are up to date.'
+            : ' An error occurred while updating you. Contact the Department of Engineering.';
 
       // Notify the user via DM if possible
       try {

@@ -1,6 +1,7 @@
 const axios = require('axios');
 const rankConfig = require('../../rankconfig.json');
 const verificationStore = require('./verificationStore');
+const bindStore = require('./bindStore');
 
 function normalize(value) {
   return String(value || '').trim().toLowerCase();
@@ -8,10 +9,6 @@ function normalize(value) {
 
 function roleidvalidation(value) {
   return /^\d{16,20}$/.test(String(value || ''));
-}
-
-function groupconfigs() {
-  return Object.values(rankConfig.groups || {});
 }
 
 function makenick(username, rankPrefixes, departmentPrefixes) {
@@ -23,9 +20,7 @@ function makenick(username, rankPrefixes, departmentPrefixes) {
 
 async function update(member, username, rankPrefixes = [], departmentPrefixes = []) {
   const nickname = makenick(username, rankPrefixes, departmentPrefixes);
-  if (member.nickname !== nickname) {
-    await member.setNickname(nickname);
-  }
+  if (member.nickname !== nickname) await member.setNickname(nickname);
   return nickname;
 }
 
@@ -73,13 +68,14 @@ async function syncmember(client, { discordId, robloxUserId, robloxUsername }) {
   const guild = await client.guilds.fetch(rankConfig.testserver);
   const member = await guild.members.fetch(discordId);
   const groups = await getgroupmemberships(robloxUserId);
-  const configuredGroups = groupconfigs();
+  const configuredGroups = Object.values(await bindStore.getGroups());
   const desiredRoleIds = new Set();
   const managedRoleIds = new Set();
   const rankPrefixes = [];
   let hasMembership = false;
   let hasUnmappedRank = false;
   let departmentPrefixes = [];
+  const oldNickname = member.nickname;
 
   for (const groupConfig of configuredGroups) {
     const baseroles = Array.isArray(groupConfig.baseroles) ? groupConfig.baseroles : [];
@@ -118,21 +114,18 @@ async function syncmember(client, { discordId, robloxUserId, robloxUsername }) {
     member.roles.cache.has(roleId) && !desiredRoleIds.has(roleId)
   );
   const addRoleIds = [...desiredRoleIds].filter(roleId => !member.roles.cache.has(roleId));
-
-  if (removeroles.length) {
-    await member.roles.remove(removeroles);
-  }
-  if (addRoleIds.length) {
-    await member.roles.add(addRoleIds);
-  }
-
-  const nickname = await update(member, robloxUsername, rankPrefixes, departmentPrefixes);
-  return {
+  const nickname = makenick(robloxUsername, rankPrefixes, departmentPrefixes);
+  const result = {
     status: !hasMembership ? 'nogroup' : hasUnmappedRank ? 'ranknotfound' : 'allg',
+    oldNickname,
     nickname,
     addedRoles: addRoleIds,
     removedRoles: removeroles
   };
+  if (removeroles.length) await member.roles.remove(removeroles);
+  if (addRoleIds.length) await member.roles.add(addRoleIds);
+  await update(member, robloxUsername, rankPrefixes, departmentPrefixes);
+  return result;
 }
 
 async function syncdepartment(member) {
@@ -143,8 +136,9 @@ async function syncdepartment(member) {
   const rankPrefixes = [];
   let departmentPrefixes = [];
   let hasMembership = false;
+  const oldNickname = member.nickname;
 
-  for (const groupConfig of groupconfigs()) {
+  for (const groupConfig of Object.values(await bindStore.getGroups())) {
     const membership = findmembership(groups, groupConfig);
     if (!membership) continue;
     hasMembership = true;
@@ -159,14 +153,15 @@ async function syncdepartment(member) {
     }
   }
 
-  const nickname = await update( member, verification.roblox_username, rankPrefixes, departmentPrefixes );
-  return { status: hasMembership ? 'updated' : 'nogroup', nickname };
+  const nickname = await update(member, verification.roblox_username, rankPrefixes, departmentPrefixes);
+  return { status: hasMembership ? 'updated' : 'nogroup', oldNickname, nickname };
 }
 
 async function syncroleupdate(oldMember, newMember) {
   if (newMember.guild.id !== String(rankConfig.testserver)) return null;
 
-  const departmentids = groupconfigs()
+  const configuredGroups = Object.values(await bindStore.getGroups());
+  const departmentids = configuredGroups
     .flatMap(groupConfig => Array.isArray(groupConfig.departmentmap) ? groupConfig.departmentmap : [])
     .map(department => department.roleid)
     .filter(roleidvalidation);
