@@ -3,12 +3,22 @@ const crypto = require('crypto');
 const rankConfig = require('../../rankconfig.json');
 const serviceAccount = require('../../agentos-c3e04-firebase-adminsdk-fbsvc-3223816f6b.json');
 const databaseUrl = 'https://agentos-c3e04-default-rtdb.firebaseio.com';
+const requestTimeout = 30000;
 
 let accessToken = null;
 let tokenExpiresAt = 0;
 
 function base64url(value) {
   return Buffer.from(value).toString('base64url');
+}
+
+function responseErrorMessage(error) {
+  const data = error.response?.data;
+  if (typeof data === 'string') return data;
+  if (typeof data?.error === 'string') return data.error_description || data.error;
+  if (data?.error?.message) return data.error.message;
+  if (data?.message) return data.message;
+  return error.message || 'Unknown error';
 }
 
 async function getAccessToken() {
@@ -28,14 +38,23 @@ async function getAccessToken() {
   const signer = crypto.createSign('RSA-SHA256');
   signer.update(unsignedToken);
   const assertion = `${unsignedToken}.${signer.sign(serviceAccount.private_key, 'base64url')}`;
-  const response = await axios.post(
-    tokenUrl,
-    new URLSearchParams({
-      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-      assertion
-    }).toString(),
-    { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 10000 }
-  );
+  let response;
+  try {
+    response = await axios.post(
+      tokenUrl,
+      new URLSearchParams({
+        grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+        assertion
+      }).toString(),
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: requestTimeout }
+    );
+  } catch (error) {
+    const status = error.response?.status;
+    throw new Error(
+      `Firebase authentication failed${status ? ` (${status})` : ''}: ${responseErrorMessage(error)}`,
+      { cause: error }
+    );
+  }
   if (!response.data?.access_token) throw new Error('Google did not return a Firebase access token.');
   accessToken = response.data.access_token;
   tokenExpiresAt = Date.now() + Number(response.data.expires_in || 3600) * 1000;
@@ -45,13 +64,22 @@ async function getAccessToken() {
 async function databaseRequest(method, databasePath, data) {
   const token = await getAccessToken();
   const url = `${databaseUrl}/${databasePath}.json`;
-  const response = await axios({
-    method,
-    url,
-    data,
-    headers: { Authorization: `Bearer ${token}` },
-    timeout: 10000
-  });
+  let response;
+  try {
+    response = await axios({
+      method,
+      url,
+      data,
+      headers: { Authorization: `Bearer ${token}` },
+      timeout: requestTimeout
+    });
+  } catch (error) {
+    const status = error.response?.status;
+    throw new Error(
+      `Firebase ${method.toUpperCase()} ${databasePath} failed${status ? ` (${status})` : ''}: ${responseErrorMessage(error)}`,
+      { cause: error }
+    );
+  }
   return response.data;
 }
 
