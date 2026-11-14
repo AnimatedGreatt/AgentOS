@@ -1,7 +1,7 @@
 const axios = require('axios');
 const crypto = require('crypto');
 const rankConfig = require('../../rankconfig.json');
-const serviceAccount = require('../../agentos-c3e04-firebase-adminsdk-fbsvc-3223816f6b.json');
+const serviceAccount = require('../../agentos-c3e04-firebase-adminsdk-fbsvc-ad86efd25e.json');
 const databaseUrl = 'https://agentos-c3e04-default-rtdb.firebaseio.com';
 const encoder = new TextEncoder();
 const oauthTokenUrl = 'https://oauth2.googleapis.com/token';
