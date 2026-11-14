@@ -22,7 +22,7 @@ module.exports = {
       new TextDisplayBuilder().setContent('## Background check\nChecking Roblox and case records...')
     );
     await interaction.reply({
-      flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
+      flags: MessageFlags.IsComponentsV2,
       components: [progressContainer]
     });
 
