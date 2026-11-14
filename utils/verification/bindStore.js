@@ -4,12 +4,20 @@ const rankConfig = require('../../rankconfig.json');
 const serviceAccount = require('../../agentos-c3e04-firebase-adminsdk-fbsvc-3223816f6b.json');
 const databaseUrl = 'https://agentos-c3e04-default-rtdb.firebaseio.com';
 const requestTimeout = 30000;
+const encoder = new TextEncoder();
+const oauthTokenUrl = 'https://oauth2.googleapis.com/token';
 
 let accessToken = null;
 let tokenExpiresAt = 0;
 
 function base64url(value) {
-  return Buffer.from(value).toString('base64url');
+  const bytes = typeof value === 'string' ? encoder.encode(value) : value;
+  return Buffer.from(bytes).toString('base64url');
+}
+
+function privateKeyBytes(privateKey) {
+  const encoded = privateKey.replace(/-----BEGIN PRIVATE KEY-----|-----END PRIVATE KEY-----|\s/g, '');
+  return new Uint8Array(Buffer.from(encoded, 'base64'));
 }
 
 function responseErrorMessage(error) {
@@ -24,24 +32,33 @@ function responseErrorMessage(error) {
 async function getAccessToken() {
   if (accessToken && Date.now() < tokenExpiresAt - 60000) return accessToken;
 
-  const tokenUrl = serviceAccount.token_uri || 'https://oauth2.googleapis.com/token';
   const now = Math.floor(Date.now() / 1000);
   const header = base64url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
   const payload = base64url(JSON.stringify({
     iss: serviceAccount.client_email,
     scope: 'https://www.googleapis.com/auth/firebase.database',
-    aud: tokenUrl,
+    aud: oauthTokenUrl,
     iat: now,
     exp: now + 3600
   }));
   const unsignedToken = `${header}.${payload}`;
-  const signer = crypto.createSign('RSA-SHA256');
-  signer.update(unsignedToken);
-  const assertion = `${unsignedToken}.${signer.sign(serviceAccount.private_key, 'base64url')}`;
+  const privateKey = await crypto.webcrypto.subtle.importKey(
+    'pkcs8',
+    privateKeyBytes(serviceAccount.private_key),
+    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const signature = new Uint8Array(await crypto.webcrypto.subtle.sign(
+    'RSASSA-PKCS1-v1_5',
+    privateKey,
+    encoder.encode(unsignedToken)
+  ));
+  const assertion = `${unsignedToken}.${base64url(signature)}`;
   let response;
   try {
     response = await axios.post(
-      tokenUrl,
+      oauthTokenUrl,
       new URLSearchParams({
         grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
         assertion
