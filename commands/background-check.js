@@ -22,7 +22,7 @@ module.exports = {
       new TextDisplayBuilder().setContent('## Background check\nChecking Roblox and case records...')
     );
     await interaction.reply({
-      flags: MessageFlags.IsComponentsV2,
+      flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
       components: [progressContainer]
     });
 
@@ -142,14 +142,15 @@ module.exports = {
             const text = `${card.name || ''}\n${card.desc || ''}`;
             return usernamePattern.test(text) || text.includes(robloxUserId);
           });
-          const lines = [matches.length ? `**${matches.length} match(es)**` : 'No suspension records found.'];
+          const lines = [matches.length
+            ? `**${matches.length} matching record${matches.length === 1 ? '' : 's'} found.**`
+            : 'No suspension records found.'];
           for (const card of matches.slice(0, 5)) {
             const title = String(card.name || 'Untitled').slice(0, 120);
             const labels = Array.isArray(card.labels)
               ? card.labels.map(label => label.name).filter(Boolean).join(', ').slice(0, 100)
               : '';
-            const description = String(card.desc || '').replace(/\s+/g, ' ').trim().slice(0, 180);
-            lines.push(`• [${title}](${card.url})${labels ? ` — ${labels}` : ''}${description ? `\n  ${description}` : ''}`);
+            lines.push(`• [${title}](${card.url})${labels ? ` — ${labels}` : ''}`);
           }
           if (matches.length > 5) lines.push(`Plus ${matches.length - 5} more.`);
           return lines;
