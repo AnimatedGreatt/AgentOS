@@ -29,7 +29,8 @@ module.exports = {
     .setDescription('Modify verified users time on the configured Google Sheet')
     .setDMPermission(false)
     .addStringOption(option =>
-      option.setName('operation')
+      option
+        .setName('operation')
         .setDescription('Operation to perform')
         .setRequired(true)
         .addChoices(
@@ -38,12 +39,14 @@ module.exports = {
         )
     )
     .addStringOption(option =>
-      option.setName('users')
+      option
+        .setName('users')
         .setDescription('Mention one or more Discord users (example: @user1 @user2)')
         .setRequired(true)
     )
     .addIntegerOption(option =>
-      option.setName('amount')
+      option
+        .setName('amount')
         .setDescription('Amount of time in minutes')
         .setRequired(true)
         .setMinValue(0)

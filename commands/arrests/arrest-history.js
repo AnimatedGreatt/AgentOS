@@ -9,7 +9,7 @@ module.exports = {
     .addStringOption(option =>
       option
         .setName('username')
-        .setDescription('Roblox username to lookup')
+        .setDescription('Input the roblox username to lookup arrest history for')
         .setRequired(true)
         .setMinLength(3)
         .setMaxLength(20)

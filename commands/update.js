@@ -51,7 +51,7 @@ module.exports = {
     .addStringOption(option =>
        option
        .setName('username')
-       .setDescription('Roblox username to update')
+       .setDescription('Input the roblox username to update')
        .setRequired(true)
        .setMinLength(3)
        .setMaxLength(20)

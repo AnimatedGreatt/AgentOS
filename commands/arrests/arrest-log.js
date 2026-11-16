@@ -9,7 +9,7 @@ module.exports = {
     .addStringOption(option =>
       option
         .setName('suspect')
-        .setDescription('Roblox username of suspect')
+        .setDescription('Input the roblox username of the suspect being arrested')
         .setRequired(true)
         .setMinLength(3)
         .setMaxLength(20)

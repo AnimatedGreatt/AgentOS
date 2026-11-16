@@ -44,8 +44,9 @@ module.exports = {
     .setName('points')
     .setDescription('Modify verified users points on the configured Google Sheet')
     .setDMPermission(false)
-    .addStringOption(o =>
-      o.setName('operation')
+    .addStringOption(option =>
+      option
+       .setName('operation')
        .setDescription('Operation to perform')
        .setRequired(true)
        .addChoices(
@@ -54,13 +55,18 @@ module.exports = {
          { name: 'Set', value: 'set' }
        )
     )
-    .addStringOption(o =>
-      o
+    .addStringOption(option =>
+      option
         .setName('users')
         .setDescription('Mention one or more Discord users (example: @user1 @user2)')
         .setRequired(true)
     )
-    .addIntegerOption(o => o.setName('amount').setDescription('Amount/value').setRequired(true)),
+    .addIntegerOption(option =>
+       option
+       .setName('amount')
+       .setDescription('Amount/value')
+       .setRequired(true)
+    ),
 
   async execute(interaction) {
     await interaction.deferReply({ ephemeral: true });
