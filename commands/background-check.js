@@ -143,7 +143,7 @@ module.exports = {
             return usernamePattern.test(text) || text.includes(robloxUserId);
           });
           const lines = [matches.length
-            ? `**${matches.length} matching record${matches.length === 1 ? '' : 's'} found.**`
+            ? `**${matches.length} suspension record${matches.length === 1 ? '' : 's'}**`
             : 'No suspension records found.'];
           for (const card of matches.slice(0, 5)) {
             const title = String(card.name || 'Untitled').slice(0, 120);
