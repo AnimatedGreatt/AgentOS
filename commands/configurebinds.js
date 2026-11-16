@@ -240,6 +240,8 @@ module.exports = {
         const prefixes = interaction.options.getBoolean('prefixes');
         const departmentRank = interaction.options.getString('department_rank');
         const groupKey = bindStore.normalizeGroupKey(key);
+        const group = (await bindStore.getGroups())[groupKey];
+        if (!group) throw new Error(`Group "${groupKey}" was not found.`);
         await bindStore.configureGroup(groupKey, {
           groupId: groupId ?? undefined,
           prefixes: prefixes ?? undefined,
@@ -250,6 +252,8 @@ module.exports = {
 
       if (action === 'remove-group') {
         const groupKey = bindStore.normalizeGroupKey(key);
+        const group = (await bindStore.getGroups())[groupKey];
+        if (!group) throw new Error(`Group "${groupKey}" was not found.`);
         await bindStore.removeGroup(groupKey);
         return interaction.editReply({ content: `Removed \`${groupKey}\`. Existing Discord roles are not removed automatically.` });
       }
@@ -257,6 +261,8 @@ module.exports = {
       if (action === 'add-base-role' || action === 'remove-base-role') {
         const role = interaction.options.getRole('role', true);
         const groupKey = bindStore.normalizeGroupKey(key);
+        const group = (await bindStore.getGroups())[groupKey];
+        if (!group) throw new Error(`Group "${groupKey}" was not found.`);
         const verb = action === 'add-base-role' ? 'added as a base role' : 'removed as a base role';
         if (action === 'add-base-role') await bindStore.addBaseRole(groupKey, role.id);
         else await bindStore.removeBaseRole(groupKey, role.id);
@@ -268,6 +274,8 @@ module.exports = {
         const role = interaction.options.getRole('role');
         const prefix = interaction.options.getString('prefix');
         const groupKey = bindStore.normalizeGroupKey(key);
+        const group = (await bindStore.getGroups())[groupKey];
+        if (!group) throw new Error(`Group "${groupKey}" was not found.`);
         await bindStore.configureRank(groupKey, {
           name: rank,
           roleId: role ? role.id : undefined,
@@ -279,6 +287,8 @@ module.exports = {
       if (action === 'remove-rank') {
         const rank = interaction.options.getString('rank', true);
         const groupKey = bindStore.normalizeGroupKey(key);
+        const group = (await bindStore.getGroups())[groupKey];
+        if (!group) throw new Error(`Group "${groupKey}" was not found.`);
         await bindStore.removeRank(groupKey, rank);
         return interaction.editReply({ content: `Removed **${rank}** from \`${groupKey}\`.` });
       }
@@ -288,6 +298,8 @@ module.exports = {
         const role = interaction.options.getRole('role', true);
         const prefix = interaction.options.getString('prefix', true);
         const groupKey = bindStore.normalizeGroupKey(key);
+        const group = (await bindStore.getGroups())[groupKey];
+        if (!group) throw new Error(`Group "${groupKey}" was not found.`);
         await bindStore.configureDepartment(groupKey, { name: department, roleId: role.id, prefix });
         return interaction.editReply({ content: `Saved department mapping for **${department}** in \`${groupKey}\`.` });
       }
@@ -295,6 +307,8 @@ module.exports = {
       if (action === 'remove-department') {
         const department = interaction.options.getString('department', true);
         const groupKey = bindStore.normalizeGroupKey(key);
+        const group = (await bindStore.getGroups())[groupKey];
+        if (!group) throw new Error(`Group "${groupKey}" was not found.`);
         await bindStore.removeDepartment(groupKey, department);
         return interaction.editReply({ content: `Removed **${department}** from \`${groupKey}\`.` });
       }
