@@ -1,23 +1,45 @@
 const rankConfig = require('../../rankconfig.json');
 const db = require('../db/firebase');
+const FIREBASE_REQUEST_TIMEOUT_MS = 10000;
 
 function responseErrorMessage(error) {
   return error.message || String(error);
 }
 
 async function databaseRequest(method, databasePath, data) {
+  let timeout;
   try {
     const ref = db.ref(databasePath);
-    if (method === 'get') return (await ref.once('value')).val();
-    if (method === 'put') return ref.set(data);
-    if (method === 'patch') return ref.update(data);
-    if (method === 'delete') return ref.remove();
-    throw new Error(`Unsupported Firebase operation: ${method}`);
+    let request;
+    if (method === 'get') request = ref.once('value').then(snapshot => snapshot.val());
+    else if (method === 'put') request = ref.set(data);
+    else if (method === 'patch') request = ref.update(data);
+    else if (method === 'delete') request = ref.remove();
+    else throw new Error(`Unsupported Firebase operation: ${method}`);
+
+    return await Promise.race([
+      request,
+      new Promise((_, reject) => {
+        timeout = setTimeout(() => {
+          const error = new Error(
+            `request timed out after ${FIREBASE_REQUEST_TIMEOUT_MS}ms; verify the binding state before retrying`
+          );
+          error.code = 'FIREBASE_OPERATION_TIMEOUT';
+          reject(error);
+        }, FIREBASE_REQUEST_TIMEOUT_MS);
+      })
+    ]);
   } catch (error) {
-    throw new Error(
+    const wrappedError = new Error(
       `Firebase ${method.toUpperCase()} ${databasePath} failed: ${responseErrorMessage(error)}`,
       { cause: error }
     );
+    if (error.code === 'FIREBASE_OPERATION_TIMEOUT') {
+      wrappedError.code = error.code;
+    }
+    throw wrappedError;
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
@@ -25,6 +47,7 @@ async function writeWithRollback(databasePath, value, previous) {
   try {
     await databaseRequest('put', databasePath, value);
   } catch (error) {
+    if (error.code === 'FIREBASE_OPERATION_TIMEOUT') throw error;
     try {
       if (previous === null) await databaseRequest('delete', databasePath);
       else await databaseRequest('put', databasePath, previous);
@@ -39,6 +62,7 @@ async function patchWithRollback(databasePath, changes, previous) {
   try {
     await databaseRequest('patch', databasePath, changes);
   } catch (error) {
+    if (error.code === 'FIREBASE_OPERATION_TIMEOUT') throw error;
     try {
       await databaseRequest('patch', databasePath, previous);
     } catch (rollbackError) {
