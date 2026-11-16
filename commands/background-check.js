@@ -162,18 +162,39 @@ module.exports = {
       (async () => {
         try {
           const arrests = await arrestStore.getArrestsByRoblox(robloxUsername);
-          const lines = [arrests.length ? `**${arrests.length} record(s)**` : 'No arrest records found.'];
+          const lines = [arrests.length
+            ? `**${arrests.length} arrest record${arrests.length === 1 ? '' : 's'}**`
+            : 'No arrest records found.'];
           for (const arrest of arrests.slice(0, 5)) {
-            const date = arrest.created_at
-              ? ` • <t:${Math.floor(new Date(arrest.created_at).getTime() / 1000)}:d>`
+            const timestamp = arrest.created_at ? new Date(arrest.created_at).getTime() : NaN;
+            const date = Number.isFinite(timestamp)
+              ? ` · <t:${Math.floor(timestamp / 1000)}:d>`
               : '';
             const details = [];
-            if (arrest.charges) details.push(`Charges: ${String(arrest.charges).slice(0, 180)}`);
-            if (arrest.sentence !== null && arrest.sentence !== undefined) details.push(`Sentence: ${arrest.sentence} minutes`);
-            if (arrest.incident_summary) details.push(`Summary: ${String(arrest.incident_summary).slice(0, 180)}`);
-            if (arrest.submitted_by_tag) details.push(`Logged by: ${arrest.submitted_by_tag}`);
-            if (arrest.proof) details.push(`[Proof](${arrest.proof})`);
-            lines.push(`• **Record ${arrest.id || ''}**${date}\n${details.length ? details.join(' • ') : 'No additional details.'}`);
+            if (arrest.charges) details.push(`  **Charges:** ${String(arrest.charges).slice(0, 180)}`);
+            if (arrest.sentence !== null && arrest.sentence !== undefined && String(arrest.sentence).trim()) {
+              const sentence = String(arrest.sentence).trim();
+              const formattedSentence = /^\d+(?:\.\d+)?$/.test(sentence)
+                ? `${sentence} minutes`
+                : sentence;
+              details.push(`  **Sentence:** ${formattedSentence}`);
+            }
+            if (arrest.incident_summary) {
+              details.push(`  **Summary:** ${String(arrest.incident_summary).slice(0, 180)}`);
+            }
+            if (arrest.submitted_by_tag) details.push(`  **Logged by:** ${arrest.submitted_by_tag}`);
+            if (arrest.proof) {
+              try {
+                const proofUrl = new URL(String(arrest.proof).trim());
+                if (proofUrl.protocol === 'https:' || proofUrl.protocol === 'http:') {
+                  const safeUrl = proofUrl.toString().replace(/\(/g, '%28').replace(/\)/g, '%29');
+                  details.push(`  **Proof:** [Open evidence](${safeUrl})`);
+                }
+              } catch (error) {
+                console.warn(`Background check found an invalid proof URL for arrest ${arrest.id}:`, error.message || error);
+              }
+            }
+            lines.push(`• **Record ${arrest.id || ''}**${date}`, ...(details.length ? details : ['  No additional details.']));
           }
           if (arrests.length > 5) lines.push(`Plus ${arrests.length - 5} more.`);
           return lines;
