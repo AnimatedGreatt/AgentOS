@@ -8,6 +8,7 @@ module.exports = {
   APPLICATION_ID: cleanId(process.env.APPLICATION_ID) || cleanId(process.env.DISCORD_APPLICATION_ID) || undefined,
   // Defaults to the OSI server so guild-locked commands (/submit, /anonymous-log) stay locked in production.
   GUILD_ID: cleanId(process.env.GUILD_ID) || "1041577710067138560",
+  DEV_GUILD_ID: "1540828031864803410",
   // Role allowed to approve cases
   REQUIRED_ROLE_ID: cleanId(process.env.REQUIRED_ROLE_ID) || "1449861438012133566,1106739929540730921",
   // Channel where approved cases are posted

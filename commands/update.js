@@ -142,7 +142,7 @@ module.exports = {
       return interaction.editReply({ content: `Updated ${roblox}'s SGC rank to **${sgcRole}** on the sheet (cell ${targetA1}).`, ephemeral: true });
     } catch (err) {
       console.error('update command error:', err);
-      return interaction.editReply({ content: 'Failed to update SGC rank due to an error.', ephemeral: true });
+      return interaction.editReply({ content: 'An error occurred while updating the user rank. Contact the Department of Engineering.', ephemeral: true });
     }
   }
 };

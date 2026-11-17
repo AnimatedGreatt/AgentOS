@@ -49,9 +49,9 @@ module.exports = {
     const row = new ActionRowBuilder().addComponents(approve, reject);
 
     const chan = await interaction.client.channels.fetch(config.EXAM_AUTH_CHANNEL_ID).catch(() => null);
-    if (!chan) return interaction.editReply({ content: 'Could not find the authorization channel.', ephemeral: true });
+    if (!chan) return interaction.editReply({ content: 'An error occurred while fetching the authorization channel. Contact the Department of Engineering.', ephemeral: true });
     const sent = await chan.send({ embeds: [embed], components: [row] }).catch(() => null);
-    if (!sent) return interaction.editReply({ content: 'Failed to create authorization request.', ephemeral: true });
+    if (!sent) return interaction.editReply({ content: 'An error occurred while creating the authorization request. Contact the Department of Engineering.', ephemeral: true });
 
     await interaction.editReply({ content: `Authorization request posted in <#${config.EXAM_AUTH_CHANNEL_ID}>`, ephemeral: true });
   }

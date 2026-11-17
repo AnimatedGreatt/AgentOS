@@ -132,13 +132,13 @@ module.exports = {
     if (!ALLOWED_USER_IDS.includes(interaction.user.id)) {
       const hasRole = interaction.member?.roles?.cache?.some(role => ALLOWED_ROLE_IDS.includes(role.id));
       if (!hasRole) {
-        await interaction.reply({ content: "❌ You do not have permission to use this command.", ephemeral: true });
+        await interaction.reply({ content: "You do not have permission to use this command.", ephemeral: true });
         return;
       }
     }
 
     if (!TRELLO_KEY || !TRELLO_TOKEN) {
-      await interaction.reply({ content: "⚠️ Trello API credentials are not configured.", ephemeral: true });
+      await interaction.reply({ content: "Trello API credentials are not configured.", ephemeral: true });
       return;
     }
 
@@ -155,24 +155,24 @@ module.exports = {
 
     try {
       if (!LIST_NAMES.includes(listName)) {
-        await interaction.editReply("⚠️ Invalid list selection.");
+        await interaction.editReply("Invalid list selection.");
         return;
       }
 
       if (!LABEL_NAMES.includes(labelName)) {
-        await interaction.editReply("⚠️ Invalid label selection.");
+        await interaction.editReply("Invalid label selection.");
         return;
       }
 
       const listId = await getListIdByName(listName);
       if (!listId) {
-        await interaction.editReply("⚠️ Could not find the Trello list.");
+        await interaction.editReply("Could not find the Trello list.");
         return;
       }
 
       const labelId = await getLabelIdByName(labelName);
       if (!labelId) {
-        await interaction.editReply("⚠️ Could not find the Trello label.");
+        await interaction.editReply("Could not find the Trello label.");
         return;
       }
 
@@ -198,10 +198,10 @@ module.exports = {
         }
       });
 
-      await interaction.editReply("✅ Suspension card created.");
+      await interaction.editReply("Suspension card created.");
     } catch (err) {
       console.error("Failed to create suspension card:", err);
-      await interaction.editReply("⚠️ Could not create the suspension card.");
+      await interaction.editReply("An error occurred while creating the suspension card. Contact the Department of Engineering.");
     }
   }
 };

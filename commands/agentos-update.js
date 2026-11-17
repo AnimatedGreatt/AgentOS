@@ -1,7 +1,12 @@
-const { SlashCommandBuilder } = require('discord.js');
-const rankConfig = require('../rankconfig.json');
+const { SlashCommandBuilder, ContainerBuilder, MessageFlags, TextDisplayBuilder } = require('discord.js');
 const verificationStore = require('../utils/verification/verificationStore');
 const { syncmember } = require('../utils/verification/rankSync');
+
+function buildcomponent(message) {
+  return new ContainerBuilder().addTextDisplayComponents(
+    new TextDisplayBuilder().setContent(`## AgentOS update\n${message}`)
+  );
+}
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -9,16 +14,15 @@ module.exports = {
     .setDescription('Update yourself'),
 
   async execute(interaction) {
-    await interaction.deferReply({ ephemeral: true });
-
-    if (interaction.guildId !== String(rankConfig.testserver)) {
-      return interaction.editReply({ content: 'Development Team Command.' });
-    }
+    await interaction.reply({
+      components: [buildcomponent('Updating your roles...')],
+      flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2
+    });
 
     try {
       const verification = await verificationStore.getByDiscord(interaction.user.id);
       if (!verification || !verification.roblox_userid) {
-        return interaction.editReply({ content: 'You are not verified.' });
+        return interaction.editReply({ components: [buildcomponent('You are not verified.')] });
       }
 
       const result = await syncmember(interaction.client, {
@@ -28,19 +32,25 @@ module.exports = {
       });
 
       if (result.status === 'allg') {
-        return interaction.editReply({ content: 'You have been updated.' });
+        return interaction.editReply({ components: [buildcomponent('You have been updated.')] });
       }
       if (result.status === 'ranknotfound') {
-        return interaction.editReply({ content: 'Rank Configuration is not complete for your rank.' });
+        return interaction.editReply({
+          components: [buildcomponent('Rank Configuration is not complete for your rank.')]
+        });
       }
       if (result.status === 'nogroup') {
-        return interaction.editReply({ content: 'You are up to date.' });
+        return interaction.editReply({ components: [buildcomponent('You are up to date.')] });
       }
 
-      return interaction.editReply({ content: 'The update could not be completed.' });
+      return interaction.editReply({
+        components: [buildcomponent('The update could not be completed.')]
+      });
     } catch (err) {
       console.error('agentos-update command failed:', err);
-      return interaction.editReply({ content: 'The update failed.' });
+      return interaction.editReply({
+        components: [buildcomponent('The update failed.')]
+      });
     }
   }
 };

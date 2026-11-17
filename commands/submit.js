@@ -87,13 +87,13 @@ module.exports = {
             await interaction.editReply({ content: `Submitted to <#${targetChannelId}>: ${link}`, ephemeral: true });
         } catch (err) {
             console.error('submit send error:', err);
-            await interaction.editReply({ content: '⚠️ Something went wrong sending the submission.', ephemeral: true });
+            await interaction.editReply({ content: 'An error occurred while submitting the case. Contact the Department of Engineering.', ephemeral: true });
         }
 
         
         } catch (err) {
                 console.error(err);
-                await interaction.editReply("⚠️ Something went wrong.");
+                await interaction.editReply("An error occurred. Contact the Department of Engineering.");
         }
     }
 };

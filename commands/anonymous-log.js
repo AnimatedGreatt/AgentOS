@@ -55,7 +55,7 @@ module.exports = {
       const targetChannelId = config.ANONYMOUS_LOG_CHANNEL_ID || config.LOG_CHANNEL_ID || interaction.channelId;
       const channel = await interaction.guild.channels.fetch(targetChannelId).catch(() => null);
       if (!channel) {
-        await interaction.editReply({ content: '❌ The anonymous log channel is not configured for this server. Set ANONYMOUS_LOG_CHANNEL_ID or LOG_CHANNEL_ID in the environment.', ephemeral: true });
+        await interaction.editReply({ content: 'The anonymous log channel is not configured for this server. Set ANONYMOUS_LOG_CHANNEL_ID or LOG_CHANNEL_ID in the environment.', ephemeral: true });
         return;
       }
       const sub = interaction.options.getSubcommand();
@@ -72,7 +72,7 @@ module.exports = {
           .setTimestamp();
 
         await channel.send({ embeds: [embed] });
-        await interaction.editReply("✅ Case submitted successfully.");
+        await interaction.editReply("Case submitted successfully.");
         return;
       }
 
@@ -98,14 +98,14 @@ module.exports = {
         }
 
         await channel.send({ embeds: [embed] });
-        await interaction.editReply("✅ Anonymous request submitted successfully.");
+        await interaction.editReply("Anonymous request submitted successfully.");
         return;
       }
 
-      await interaction.editReply("⚠️ Unknown subcommand.");
+      await interaction.editReply("Unknown subcommand.");
     } catch (err) {
       console.error(err);
-      try { await interaction.editReply("⚠️ Something went wrong."); } catch (e) {}
+      try { await interaction.editReply("An error occurred while submitting the anonymous log. Contact the Department of Engineering."); } catch (e) {}
     }
   }
 };

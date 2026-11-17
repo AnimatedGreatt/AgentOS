@@ -64,15 +64,7 @@ module.exports = {
     const boardId = config.TRELLO_SUSPENSIONS_BOARD_ID || process.env.TRELLO_SUSPENSIONS_BOARD_ID;
     const trelloKey = process.env.TRELLO_KEY;
     const trelloToken = process.env.TRELLO_TOKEN;
-    const [
-      accountLines,
-      usernameLines,
-      groupLines,
-      suspensionLines,
-      arrestLines,
-      aosLines,
-      avatarUrl
-    ] = await Promise.all([
+    const [ accountLines, usernameLines, groupLines, suspensionLines, arrestLines, aosLines, avatarUrl ] = await Promise.all([
       (async () => {
         try {
           const response = await axios.get(
@@ -89,7 +81,7 @@ module.exports = {
           ];
         } catch (error) {
           console.warn('Background check account lookup failed:', error?.response?.status || error?.message || error);
-          return ['⚠️ Account details are unavailable.'];
+          return ['Account details are unavailable.'];
         }
       })(),
       (async () => {
@@ -104,7 +96,7 @@ module.exports = {
           return [`**Previous usernames:** ${names.length ? names.map(name => `\`${name}\``).join(', ') : 'None'}`];
         } catch (error) {
           console.warn('Background check username history failed:', error?.response?.status || error?.message || error);
-          return ['⚠️ Username history is unavailable.'];
+          return ['Username history is unavailable.'];
         }
       })(),
       (async () => {
@@ -127,7 +119,7 @@ module.exports = {
           });
         } catch (error) {
           console.warn('Background check group lookup failed:', error?.response?.status || error?.message || error);
-          return ['⚠️ Roblox group memberships are unavailable.'];
+          return ['Roblox group memberships are unavailable.'];
         }
       })(),
       (async () => {
@@ -158,7 +150,7 @@ module.exports = {
           return lines;
         } catch (error) {
           console.warn('Background check suspension lookup failed:', error?.response?.status || error?.message || error);
-          return ['⚠️ Suspension records are unavailable.'];
+          return ['Suspension records are unavailable.'];
         }
       })(),
       (async () => {
@@ -202,7 +194,7 @@ module.exports = {
           return lines;
         } catch (error) {
           console.warn('Background check arrest lookup failed:', error?.message || error);
-          return ['⚠️ Arrest records are unavailable.'];
+          return ['Arrest records are unavailable.'];
         }
       })(),
       (async () => {
@@ -216,7 +208,7 @@ module.exports = {
           return lines;
         } catch (error) {
           console.warn('Background check AoS lookup failed:', error?.message || error);
-          return ['⚠️ Active AoS cases are unavailable.'];
+          return ['Active AoS cases are unavailable.'];
         }
       })(),
       (async () => {

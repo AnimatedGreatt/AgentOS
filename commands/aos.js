@@ -21,10 +21,10 @@ function hasBannedRole(member) {
 function getAosForumThread(interaction) {
   const channel = interaction.channel;
   if (!channel || typeof channel.isThread !== 'function' || !channel.isThread()) {
-    return { error: '❌ This subcommand must be used inside an AoS forum post thread.' };
+    return { error: 'This subcommand must be used inside an AoS forum post thread.' };
   }
   if (String(channel.parentId) !== String(config.AOS_FORUM_CHANNEL_ID)) {
-    return { error: '❌ This thread is not inside the configured AoS forum channel.' };
+    return { error: 'This thread is not inside the configured AoS forum channel.' };
   }
   return { thread: channel };
 }
@@ -346,7 +346,7 @@ module.exports = {
       const now = Date.now();
       if (now < nextAosListAllowedAt) {
         const waitSec = Math.max(1, Math.ceil((nextAosListAllowedAt - now) / 1000));
-        await interaction.reply({ content: `⏳ /aos list is on cooldown. Please wait ${waitSec}s.`, ephemeral: false });
+        await interaction.reply({ content: `/aos list is on cooldown. Please wait ${waitSec}s.`, ephemeral: false });
         return;
       }
       nextAosListAllowedAt = now + AOS_LIST_COOLDOWN_MS;
@@ -355,20 +355,20 @@ module.exports = {
     await interaction.deferReply({ ephemeral: false });
 
     if (!interaction.inGuild()) {
-      await interaction.editReply('❌ This command can only be used in a server.');
+      await interaction.editReply('This command can only be used in a server.');
       return;
     }
 
     const bannedRole = hasBannedRole(interaction.member);
 
     if (sub !== 'list' && bannedRole) {
-      await interaction.editReply('❌ You are not allowed to use this AoS subcommand.');
+      await interaction.editReply('You are not allowed to use this AoS subcommand.');
       return;
     }
 
     if (sub === 'add') {
       if (!hasAnyAllowedRole(interaction.member, config.AOS_ADD_ROLE_IDS_LIST)) {
-        await interaction.editReply('❌ You do not have permission to run /aos add.');
+        await interaction.editReply('You do not have permission to run /aos add.');
         return;
       }
 
@@ -402,7 +402,7 @@ module.exports = {
 
       const forumChannel = await interaction.guild.channels.fetch(config.AOS_FORUM_CHANNEL_ID).catch(() => null);
       if (!forumChannel || forumChannel.type !== ChannelType.GuildForum) {
-        await interaction.editReply('❌ AoS forum channel is missing or not a forum channel.');
+        await interaction.editReply('AoS forum channel is missing or not a forum channel.');
         return;
       }
 
@@ -425,22 +425,22 @@ module.exports = {
           appliedTags: uniqueTags(optionalTags)
         });
 
-        let response = `✅ AoS created: ${created.url || `https://discord.com/channels/${interaction.guildId}/${created.id}`}\nComputed jail time: ${jailMinutes} minute(s).`;
+        let response = `AoS created: ${created.url || `https://discord.com/channels/${interaction.guildId}/${created.id}`}\nComputed jail time: ${jailMinutes} minute(s).`;
         if (sentencing.unknownCodes.length) {
-          response += `\n⚠️ Unknown law codes (counted as 0): ${sentencing.unknownCodes.join(', ')}`;
+          response += `\nUnknown law codes (counted as 0): ${sentencing.unknownCodes.join(', ')}`;
         }
 
         await interaction.editReply(response);
       } catch (err) {
         console.error('aos add failed:', err);
-        await interaction.editReply('⚠️ Failed to create AoS forum post.');
+        await interaction.editReply('Failed to create AoS forum post.');
       }
       return;
     }
 
     if (sub === 'approve') {
       if (!hasAnyAllowedRole(interaction.member, config.AOS_APPROVE_ROLE_IDS_LIST)) {
-        await interaction.editReply('❌ You do not have permission to run /aos approve.');
+        await interaction.editReply('You do not have permission to run /aos approve.');
         return;
       }
 
@@ -456,7 +456,7 @@ module.exports = {
       if (has30DayTagExpired(thread)) {
         const changed = await enforceAos30DayExpirationForThread(thread).catch(() => false);
         if (changed) {
-          await interaction.editReply('⚠️ This AoS exceeded 30 days and was automatically recalled (inactive + recalled tags applied).');
+          await interaction.editReply('This AoS exceeded 30 days and was automatically recalled (inactive + recalled tags applied).');
           return;
         }
       }
@@ -469,7 +469,7 @@ module.exports = {
 
       if (status === 'denied') {
         if (hasInactive && hasRecalled && !hasActive) {
-          await interaction.editReply('⚠️ This AoS is already denied (inactive + recalled).');
+          await interaction.editReply('This AoS is already denied (inactive + recalled).');
           return;
         }
 
@@ -495,16 +495,16 @@ module.exports = {
           } catch (storeErr) {
             console.warn('aos deny: failed to remove active AOS row:', storeErr?.message || storeErr);
           }
-          await interaction.editReply('✅ AoS denied and set to inactive + recalled.');
+          await interaction.editReply('AoS denied and set to inactive + recalled.');
         } catch (err) {
           console.error('aos deny failed:', err);
-          await interaction.editReply('⚠️ Failed to update AoS tags.');
+          await interaction.editReply('Failed to update AoS tags.');
         }
         return;
       }
 
       if (hasApproved && hasActive && !hasInactive && !hasCompleted) {
-        await interaction.editReply('⚠️ This AoS is already approved and active.');
+        await interaction.editReply('This AoS is already approved and active.');
         return;
       }
 
@@ -560,18 +560,18 @@ module.exports = {
         }
         const reopened = hasInactive || hasCompleted;
         await interaction.editReply(reopened
-          ? '✅ AoS approved and set to active (re-opened).'
-          : '✅ AoS approved and marked active.');
+          ? 'AoS approved and set to active (re-opened).'
+          : 'AoS approved and marked active.');
       } catch (err) {
         console.error('aos approve failed:', err);
-        await interaction.editReply('⚠️ Failed to update AoS tags.');
+        await interaction.editReply('Failed to update AoS tags.');
       }
       return;
     }
 
     if (sub === 'complete') {
       if (!hasAnyAllowedRole(interaction.member, config.AOS_COMPLETE_ROLE_IDS_LIST)) {
-        await interaction.editReply('❌ You do not have permission to run /aos complete.');
+        await interaction.editReply('You do not have permission to run /aos complete.');
         return;
       }
 
@@ -586,7 +586,7 @@ module.exports = {
       const hasActive = tags.includes(String(config.AOS_TAG_ACTIVE_WARRANT_ID));
 
       if (!hasActive) {
-        await interaction.editReply('❌ This AoS is not active, so it cannot be marked complete.');
+        await interaction.editReply('This AoS is not active, so it cannot be marked complete.');
         return;
       }
 
@@ -613,19 +613,19 @@ module.exports = {
         } catch (storeErr) {
           console.warn('aos complete: failed to remove active AOS row:', storeErr?.message || storeErr);
         }
-        await thread.send(`✅ AoS marked complete by <@${interaction.user.id}>.`).catch(() => null);
+        await thread.send(`AoS marked complete by <@${interaction.user.id}>.`).catch(() => null);
         await thread.send(`<@&${config.AOS_COMPLETE_PING_ROLE_ID}>`).catch(() => null);
-        await interaction.editReply('✅ AoS marked complete.');
+        await interaction.editReply('AoS marked complete.');
       } catch (err) {
         console.error('aos complete failed:', err);
-        await interaction.editReply('⚠️ Failed to update AoS tags.');
+        await interaction.editReply('Failed to update AoS tags.');
       }
       return;
     }
 
     if (sub === 'list') {
       if (!bannedRole && !hasAnyAllowedRole(interaction.member, config.AOS_ADD_ROLE_IDS_LIST)) {
-        await interaction.editReply('❌ You do not have permission to run /aos list.');
+        await interaction.editReply('You do not have permission to run /aos list.');
         return;
       }
 
@@ -697,11 +697,11 @@ module.exports = {
         });
       } catch (err) {
         console.error('aos list failed:', err);
-        await interaction.editReply('⚠️ Failed to fetch active AoS entries.');
+        await interaction.editReply('An error occurred while fetching active AoS entries. Contact the Department of Engineering.');
       }
       return;
     }
 
-    await interaction.editReply('⚠️ Unknown subcommand.');
+    await interaction.editReply('Unknown subcommand.');
   }
 };

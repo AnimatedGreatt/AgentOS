@@ -31,7 +31,7 @@ module.exports = {
     await interaction.deferReply();
 
     if (!TRELLO_KEY || !TRELLO_TOKEN) {
-      await interaction.editReply("⚠️ Trello API credentials are not configured.");
+      await interaction.editReply("Trello API credentials are not configured.");
       return;
     }
 
@@ -70,7 +70,7 @@ module.exports = {
       await interaction.editReply({ embeds: [embed] });
     } catch (err) {
       console.error("Law lookup failed:", err);
-      await interaction.editReply("⚠️ Could not fetch laws from Trello.");
+      await interaction.editReply("An error occurred while looking up the law. Contact the Department of Engineering.");
     }
   }
 };

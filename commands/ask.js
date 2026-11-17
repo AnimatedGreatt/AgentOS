@@ -22,11 +22,11 @@ module.exports = {
 
   async execute(interaction) {
     if (!isAiGuild(interaction.guildId, interaction.user.id)) {
-      await interaction.reply({ content: "❌ This command is not available in this server.", ephemeral: true });
+      await interaction.reply({ content: "This command is not available in this server.", ephemeral: true });
       return;
     }
     if (!process.env.ANTHROPIC_API_KEY) {
-      await interaction.reply({ content: "⚠️ The AI assistant is not configured.", ephemeral: true });
+      await interaction.reply({ content: "The AI assistant is not configured.", ephemeral: true });
       return;
     }
 

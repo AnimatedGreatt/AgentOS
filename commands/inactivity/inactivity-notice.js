@@ -29,7 +29,7 @@ module.exports = {
       await interaction.showModal(modal);
     } catch (err) {
       console.error('Failed to show inactivity modal:', err);
-      await interaction.reply({ content: 'Failed to open form.', ephemeral: true });
+      await interaction.reply({ content: 'An error occurred while opening the form. Contact the Department of Engineering.', ephemeral: true });
     }
   }
 };

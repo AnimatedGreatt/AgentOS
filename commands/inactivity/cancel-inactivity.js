@@ -28,7 +28,7 @@ module.exports = {
     const approverRoles = parseApproverRoles();
     const allowedRoles = approverRoles.length ? approverRoles : [config.REQUIRED_ROLE_ID];
     const hasPerm = interaction.member && interaction.member.roles && allowedRoles.some(r => interaction.member.roles.cache.has(r));
-    if (!hasPerm) return interaction.editReply({ content: '❌ You do not have permission to cancel inactivity entries.', ephemeral: true });
+    if (!hasPerm) return interaction.editReply({ content: 'You do not have permission to cancel inactivity entries.', ephemeral: true });
 
     const optUsername = interaction.options.getString('username');
     if (!optUsername) return interaction.editReply({ content: 'You must provide a Roblox username to cancel.', ephemeral: true });
@@ -60,10 +60,10 @@ module.exports = {
         }
       }
 
-      await interaction.editReply({ content: `✅ Inactivity for ${found.roblox_username} cancelled and removed from active IN list by ${interaction.user.tag}.`, ephemeral: true });
+      await interaction.editReply({ content: `Inactivity for ${found.roblox_username} cancelled and removed from active IN list by ${interaction.user.tag}.`, ephemeral: true });
     } catch (err) {
       console.error('cancel-inactivity error:', err);
-      await interaction.editReply({ content: 'An error occurred while cancelling inactivity.', ephemeral: true });
+      await interaction.editReply({ content: 'An error occurred while cancelling the inactivity entry. Contact the Department of Engineering.', ephemeral: true });
     }
   }
 };

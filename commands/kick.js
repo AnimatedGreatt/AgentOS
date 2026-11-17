@@ -35,7 +35,7 @@ module.exports = {
     await interaction.deferReply({ ephemeral: true });
 
     if (!(await ensureCommandAccess(interaction))) {
-      return interaction.editReply({ content: '❌ You are not allowed to use this command.', ephemeral: true });
+      return interaction.editReply({ content: 'You are not allowed to use this command.', ephemeral: true });
     }
 
     const targetGuildId = config.KICK_TARGET_GUILD_ID;
@@ -45,7 +45,7 @@ module.exports = {
 
     if (!targetGuildId || !stripGuildId) {
       return interaction.editReply({
-        content: '⚠️ Command is not configured. Set KICK_TARGET_GUILD_ID and KICK_ROLE_STRIP_GUILD_ID.',
+        content: 'Command is not configured. Set KICK_TARGET_GUILD_ID and KICK_ROLE_STRIP_GUILD_ID.',
         ephemeral: true
       });
     }
@@ -62,21 +62,21 @@ module.exports = {
     try {
       const targetGuild = await interaction.client.guilds.fetch(targetGuildId).catch(() => null);
       if (!targetGuild) {
-        summary.push(`⚠️ Could not access target guild ${targetGuildId}.`);
+        summary.push(`Could not access target guild ${targetGuildId}.`);
       } else {
         const me = await targetGuild.members.fetchMe().catch(() => null);
         if (!me || !me.permissions.has(PermissionsBitField.Flags.KickMembers)) {
-          summary.push(`⚠️ I do not have Kick Members permission in ${targetGuild.name} (${targetGuild.id}).`);
+          summary.push(`I do not have Kick Members permission in ${targetGuild.name} (${targetGuild.id}).`);
         } else {
           const targetMember = await targetGuild.members.fetch(user.id).catch(() => null);
           if (!targetMember) {
-            summary.push(`ℹ️ ${user.tag} is not in ${targetGuild.name}, so no kick was needed.`);
+            summary.push(`${user.tag} is not in ${targetGuild.name}, so no kick was needed.`);
           } else if (!targetMember.kickable) {
-            summary.push(`⚠️ ${user.tag} is in ${targetGuild.name}, but cannot be kicked (role hierarchy/permissions).`);
+            summary.push(`${user.tag} is in ${targetGuild.name}, but cannot be kicked (role hierarchy/permissions).`);
           } else {
             await targetMember.kick(reason);
             didKick = true;
-            summary.push(`✅ Kicked ${user.tag} from ${targetGuild.name}.`);
+            summary.push(`Kicked ${user.tag} from ${targetGuild.name}.`);
 
             const dmEmbed = new EmbedBuilder()
               .setTitle('You Were Kicked')
@@ -91,43 +91,43 @@ module.exports = {
 
             try {
               await user.send({ embeds: [dmEmbed] });
-              summary.push('✅ Sent kick notice DM to affected user.');
+              summary.push('Sent kick notice DM to affected user.');
             } catch (dmErr) {
-              summary.push('⚠️ Could not DM the affected user.');
+              summary.push('Could not DM the affected user.');
             }
           }
         }
       }
     } catch (err) {
       console.error('kick command: failed during target guild kick step', err);
-      summary.push('⚠️ Failed while attempting kick action.');
+      summary.push('Failed while attempting kick action.');
     }
 
     // 2) Remove configured roles in configured strip guild.
     try {
       const stripGuild = await interaction.client.guilds.fetch(stripGuildId).catch(() => null);
       if (!stripGuild) {
-        summary.push(`⚠️ Could not access role-strip guild ${stripGuildId}.`);
+        summary.push(`Could not access role-strip guild ${stripGuildId}.`);
       } else if (!stripRoleIds.length) {
-        summary.push(`ℹ️ No strip roles configured for ${stripGuild.name} (KICK_ROLE_STRIP_ROLE_IDS is empty).`);
+        summary.push(`No strip roles configured for ${stripGuild.name} (KICK_ROLE_STRIP_ROLE_IDS is empty).`);
       } else {
         const stripMember = await stripGuild.members.fetch(user.id).catch(() => null);
         if (!stripMember) {
-          summary.push(`ℹ️ ${user.tag} is not in ${stripGuild.name}, so no roles were removed.`);
+          summary.push(`${user.tag} is not in ${stripGuild.name}, so no roles were removed.`);
         } else {
           const existingRoleIds = stripRoleIds.filter(roleId => stripMember.roles.cache.has(roleId));
           if (!existingRoleIds.length) {
-            summary.push(`ℹ️ ${user.tag} does not currently have any configured strip roles in ${stripGuild.name}.`);
+            summary.push(`${user.tag} does not currently have any configured strip roles in ${stripGuild.name}.`);
           } else {
             await stripMember.roles.remove(existingRoleIds, `Role strip via /kick by ${interaction.user.tag} (${interaction.user.id})`);
             removedRoleCount = existingRoleIds.length;
-            summary.push(`✅ Removed ${existingRoleIds.length} configured role(s) from ${user.tag} in ${stripGuild.name}.`);
+            summary.push(`Removed ${existingRoleIds.length} configured role(s) from ${user.tag} in ${stripGuild.name}.`);
           }
         }
       }
     } catch (err) {
       console.error('kick command: failed during role strip step', err);
-      summary.push('⚠️ Failed while attempting role removal action.');
+      summary.push('Failed while attempting role removal action.');
     }
 
     if (kickLogChannelId) {

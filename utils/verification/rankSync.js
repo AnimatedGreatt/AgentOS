@@ -1,5 +1,5 @@
 const axios = require('axios');
-const rankConfig = require('../../rankconfig.json');
+const config = require('../../config');
 const verificationStore = require('./verificationStore');
 const bindStore = require('./bindStore');
 
@@ -65,7 +65,7 @@ async function getdepartmentprefixes(member, membership, groupConfig) {
 }
 
 async function syncmember(client, { discordId, robloxUserId, robloxUsername }) {
-  const guild = await client.guilds.fetch(rankConfig.testserver);
+  const guild = await client.guilds.fetch(config.DEV_GUILD_ID);
   const member = await guild.members.fetch(discordId);
   const groups = await getgroupmemberships(robloxUserId);
   const configuredGroups = Object.values(await bindStore.getGroups());
@@ -158,7 +158,7 @@ async function syncdepartment(member) {
 }
 
 async function syncroleupdate(oldMember, newMember) {
-  if (newMember.guild.id !== String(rankConfig.testserver)) return null;
+  if (newMember.guild.id !== String(config.DEV_GUILD_ID)) return null;
 
   const configuredGroups = Object.values(await bindStore.getGroups());
   const departmentids = configuredGroups

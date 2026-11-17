@@ -65,11 +65,11 @@ module.exports = {
           : String(config.REQUIRED_ROLE_ID || '').split(',').map(roleId => roleId.trim()).filter(Boolean);
         const hasRequiredRole = requiredRoles.some(roleId => interaction.member.roles.cache.has(roleId));
         if (!hasRequiredRole) {
-          await interaction.editReply({ content: '❌ You do not have permission to run this command.', ephemeral: true });
+          await interaction.editReply({ content: 'You do not have permission to run this command.', ephemeral: true });
           return;
         }
       } catch (err) {
-        try { await interaction.editReply({ content: '❌ You do not have permission to run this command.', ephemeral: true }); } catch (e) {}
+        try { await interaction.editReply({ content: 'You do not have permission to run this command.', ephemeral: true }); } catch (e) {}
         return;
       }
     }

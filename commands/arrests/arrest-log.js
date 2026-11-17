@@ -49,14 +49,14 @@ module.exports = {
       if (reqRole) {
         const permissionGuildId = String(config.ARREST_GUILD_ID || '').trim();
         if (!permissionGuildId) {
-          await interaction.editReply({ content: '❌ Arrest permission guild is not configured.', ephemeral: true });
+          await interaction.editReply({ content: 'Arrest permission guild is not configured.', ephemeral: true });
           return;
         }
 
         const permissionGuild = interaction.client.guilds.cache.get(permissionGuildId)
           || await interaction.client.guilds.fetch(permissionGuildId).catch(() => null);
         if (!permissionGuild) {
-          await interaction.editReply({ content: '❌ Could not resolve the arrest permission guild.', ephemeral: true });
+          await interaction.editReply({ content: 'Could not resolve the arrest permission guild.', ephemeral: true });
           return;
         }
 
@@ -64,12 +64,12 @@ module.exports = {
         const hasRequiredRole = !!(fetchedMember && fetchedMember.roles && fetchedMember.roles.cache && fetchedMember.roles.cache.has(reqRole));
 
         if (!hasRequiredRole) {
-          await interaction.editReply({ content: '❌ You do not have permission to run this command.', ephemeral: true });
+          await interaction.editReply({ content: 'You do not have permission to run this command.', ephemeral: true });
           return;
         }
       }
     } catch (e) {
-      try { await interaction.editReply({ content: '❌ Permission check failed.', ephemeral: true }); } catch (_) {}
+      try { await interaction.editReply({ content: 'Permission check failed.', ephemeral: true }); } catch (_) {}
       return;
     }
 
@@ -112,7 +112,7 @@ module.exports = {
       await interaction.editReply({ content: `Arrest logged (ID ${record.id}).`, ephemeral: true });
     } catch (e) {
       console.error('arrest-log failed:', e);
-      await interaction.editReply({ content: 'Failed to log arrest.', ephemeral: true });
+      await interaction.editReply({ content: 'An error occurred while logging the arrest. Contact the Department of Engineering.', ephemeral: true });
     }
   }
 };

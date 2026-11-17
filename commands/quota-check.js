@@ -259,12 +259,12 @@ module.exports = {
         return;
       }
       if (!permission.allowed) {
-        await interaction.editReply({ content: '❌ You do not have permission to run this command.', ephemeral: true });
+        await interaction.editReply({ content: 'You do not have permission to run this command.', ephemeral: true });
         return;
       }
     } catch (err) {
       // If anything goes wrong resolving roles, deny by default
-      try { await interaction.editReply({ content: '❌ You do not have permission to run this command.', ephemeral: true }); } catch (e) {}
+      try { await interaction.editReply({ content: 'You do not have permission to run this command.', ephemeral: true }); } catch (e) {}
       return;
     }
 
@@ -511,7 +511,7 @@ module.exports = {
 
     } catch (err) {
       console.error("quota-check error:", err);
-      await interaction.editReply("An error occurred while running the quota check.");
+      await interaction.editReply("An error occurred while running the quota check. Contact the Department of Engineering.");
     }
   }
 };

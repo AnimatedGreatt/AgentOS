@@ -50,7 +50,7 @@ module.exports = {
 
       const robloxUser = userRes.data.data[0];
       if (!robloxUser) {
-        const embed = getErrorEmbed(41) || new EmbedBuilder().setDescription("❌ Roblox user not found.");
+        const embed = getErrorEmbed(41) || new EmbedBuilder().setDescription("Roblox user not found.");
         return interaction.editReply({ embeds: [embed] });
       }
       const userId = robloxUser.id;
@@ -89,7 +89,7 @@ module.exports = {
       }
 
       if (!hasAnyGroup) {
-        embed.setDescription("❌ User is not in any tracked groups.");
+        embed.setDescription("User is not in any tracked groups.");
       }
 
       await interaction.editReply({ embeds: [embed] });

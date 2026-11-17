@@ -17,6 +17,7 @@ const pausedCommands = require('../pausedCommands');
 const arrestStore = require('../arrestStore');
 const eventSystem = require('../events/eventSystem');
 const { handleAiFeedbackButton, handleAiFeedbackModal } = require('../ai/aiDiscord');
+const configureBinds = require('../../commands/configurebinds');
 
 /**
  * Main interaction handler that routes to appropriate handlers
@@ -384,6 +385,11 @@ async function handleInteraction(interaction, client) {
 
     // Handle select menu interactions
     if (interaction.isStringSelectMenu && interaction.isStringSelectMenu()) {
+      if (typeof interaction.customId === 'string' && interaction.customId.startsWith('configurebinds:action:')) {
+        await configureBinds.handleSelect(interaction);
+        return;
+      }
+
       if (typeof interaction.customId === 'string' && interaction.customId.startsWith('arrest_select:')) {
         await interaction.deferReply({ ephemeral: true });
         try {
@@ -451,6 +457,11 @@ async function handleInteraction(interaction, client) {
 
     // Handle modal submissions
     if (interaction.isModalSubmit()) {
+      if (typeof interaction.customId === 'string' && interaction.customId.startsWith('configurebinds:modal:')) {
+        await configureBinds.handleModal(interaction);
+        return;
+      }
+
       if (interaction.customId.startsWith('ai_fb_modal:')) {
         await handleAiFeedbackModal(interaction);
         return;

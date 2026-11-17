@@ -57,7 +57,7 @@ module.exports = {
       await interaction.editReply({ embeds: [pages[0]], components: rows, ephemeral: true });
     } catch (e) {
       console.error('arrest-history failed:', e);
-      await interaction.editReply({ content: 'Failed to fetch arrest history.', ephemeral: true });
+      await interaction.editReply({ content: 'An error occurred while fetching the arrest history. Contact the Department of Engineering.', ephemeral: true });
     }
   }
 };

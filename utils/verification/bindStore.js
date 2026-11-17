@@ -1,150 +1,111 @@
-const rankConfig = require('../../rankconfig.json');
 const db = require('../db/firebase');
 
-function responseErrorMessage(error) {
-  return error.message || String(error);
+function normalizekey(value) {
+  const key = String(value || '').trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '');
+  if (!key) throw new Error('Group key must contain letters or numbers.');
+  return key;
+}
+
+function validategroup(groupId) {
+  const id = Number(groupId);
+  if (!Number.isSafeInteger(id) || id <= 0) throw new Error('Roblox group ID must be a positive integer.');
+  return id;
+}
+
+function validaterole(roleId) {
+  const id = String(roleId || '');
+  if (!/^\d{16,20}$/.test(id)) throw new Error('Discord role ID is invalid.');
+  return id;
 }
 
 async function databaseRequest(method, databasePath, data) {
   try {
     const ref = db.ref(databasePath);
     if (method === 'get') return (await ref.once('value')).val();
-    if (method === 'put') return ref.set(data);
-    if (method === 'patch') return ref.update(data);
-    if (method === 'delete') return ref.remove();
+    if (method === 'put') return await ref.set(data);
+    if (method === 'patch') return await ref.update(data);
+    if (method === 'delete') return await ref.remove();
     throw new Error(`Unsupported Firebase operation: ${method}`);
   } catch (error) {
     throw new Error(
-      `Firebase ${method.toUpperCase()} ${databasePath} failed: ${responseErrorMessage(error)}`,
+      `Firebase ${method.toUpperCase()} ${databasePath} failed: ${(error && error.message) || String(error)}`,
       { cause: error }
     );
   }
 }
 
-async function writeWithRollback(databasePath, value, previous) {
-  try {
-    await databaseRequest('put', databasePath, value);
-  } catch (error) {
-    try {
-      if (previous === null) await databaseRequest('delete', databasePath);
-      else await databaseRequest('put', databasePath, previous);
-    } catch (rollbackError) {
-      console.error(`Failed to restore Firebase value at ${databasePath}:`, rollbackError);
-    }
-    throw error;
-  }
-}
-
-async function patchWithRollback(databasePath, changes, previous) {
-  try {
-    await databaseRequest('patch', databasePath, changes);
-  } catch (error) {
-    try {
-      await databaseRequest('patch', databasePath, previous);
-    } catch (rollbackError) {
-      console.error(`Failed to restore Firebase fields at ${databasePath}:`, rollbackError);
-    }
-    throw error;
-  }
-}
-
-function normalizeGroupKey(value) {
-  const key = String(value || '').trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '');
-  if (!key) throw new Error('Group key must contain letters or numbers.');
-  return key;
-}
-
-function validateGroupId(groupId) {
-  const id = Number(groupId);
-  if (!Number.isSafeInteger(id) || id <= 0) throw new Error('Roblox group ID must be a positive integer.');
-  return id;
-}
-
-function validateRoleId(roleId) {
-  const id = String(roleId || '');
-  if (!/^\d{16,20}$/.test(id)) throw new Error('Discord role ID is invalid.');
-  return id;
-}
-
 async function getGroups() {
-  let groups = await databaseRequest('get', 'verificationBinds/groups');
-  if (!groups) {
-    groups = rankConfig.groups || {};
-    await databaseRequest('put', 'verificationBinds/groups', groups);
-  }
-  return groups;
+  return (await databaseRequest('get', 'verificationBinds/groups')) || {};
 }
 
 async function addGroup({ key, groupId, prefixes = false }) {
-  const normalizedKey = normalizeGroupKey(key);
+  const normalizedKey = normalizekey(key);
   const groups = await getGroups();
   if (groups[normalizedKey]) throw new Error(`Group "${normalizedKey}" is already configured.`);
-  await writeWithRollback(`verificationBinds/groups/${normalizedKey}`, {
-    groupid: validateGroupId(groupId),
+  await databaseRequest('put', `verificationBinds/groups/${normalizedKey}`, {
+    groupid: validategroup(groupId),
     prefixes: Boolean(prefixes),
     baseroles: [],
     rankmap: []
-  }, null);
+  });
   return normalizedKey;
 }
 
 async function configureGroup(key, changes) {
-  const normalizedKey = normalizeGroupKey(key);
+  const normalizedKey = normalizekey(key);
   const groups = await getGroups();
   if (!groups[normalizedKey]) throw new Error(`Group "${normalizedKey}" was not found.`);
   const updates = {};
-  if (changes.groupId !== undefined) updates.groupid = validateGroupId(changes.groupId);
+  if (changes.groupId !== undefined) updates.groupid = validategroup(changes.groupId);
   if (changes.prefixes !== undefined) updates.prefixes = Boolean(changes.prefixes);
   if (changes.departmentRank !== undefined) updates.departmentnickname = String(changes.departmentRank).trim();
   if (!Object.keys(updates).length) throw new Error('No group settings were provided.');
-  const previous = {};
-  for (const field of Object.keys(updates)) {
-    previous[field] = Object.prototype.hasOwnProperty.call(groups[normalizedKey], field)
-      ? groups[normalizedKey][field]
-      : null;
-  }
-  await patchWithRollback(`verificationBinds/groups/${normalizedKey}`, updates, previous);
+  await databaseRequest('patch', `verificationBinds/groups/${normalizedKey}`, updates);
   return normalizedKey;
 }
 
 async function removeGroup(key) {
-  const normalizedKey = normalizeGroupKey(key);
+  const normalizedKey = normalizekey(key);
   const groups = await getGroups();
   if (!groups[normalizedKey]) throw new Error(`Group "${normalizedKey}" was not found.`);
   const removed = groups[normalizedKey];
-  await writeWithRollback(`verificationBinds/groups/${normalizedKey}`, null, removed);
+  await databaseRequest('delete', `verificationBinds/groups/${normalizedKey}`);
   return { key: normalizedKey, group: removed };
 }
 
 async function addBaseRole(key, roleId) {
-  const normalizedKey = normalizeGroupKey(key);
-  const id = validateRoleId(roleId);
+  const normalizedKey = normalizekey(key);
+  const id = validaterole(roleId);
   const groups = await getGroups();
   const group = groups[normalizedKey];
   if (!group) throw new Error(`Group "${normalizedKey}" was not found.`);
   const roles = Array.isArray(group.baseroles) ? group.baseroles : [];
   if (roles.includes(id)) throw new Error('That base role is already configured.');
-  await writeWithRollback(
+  await databaseRequest(
+    'put',
     `verificationBinds/groups/${normalizedKey}/baseroles`,
-    [...roles, id],
-    Array.isArray(group.baseroles) ? group.baseroles : null
+    [...roles, id]
   );
   return normalizedKey;
 }
 
 async function removeBaseRole(key, roleId) {
-  const normalizedKey = normalizeGroupKey(key);
-  const id = validateRoleId(roleId);
+  const normalizedKey = normalizekey(key);
+  const id = validaterole(roleId);
   const groups = await getGroups();
   const group = groups[normalizedKey];
   const roles = group && Array.isArray(group.baseroles) ? group.baseroles : [];
   if (!roles.includes(id)) throw new Error('That base role was not found.');
-  await writeWithRollback(`verificationBinds/groups/${normalizedKey}/baseroles`, roles.filter(role => role !== id), roles);
+  await databaseRequest(
+    'put',
+    `verificationBinds/groups/${normalizedKey}/baseroles`,
+    roles.filter(role => role !== id)
+  );
   return normalizedKey;
 }
 
 async function configureRank(key, { name, roleId, prefix }) {
-  const normalizedKey = normalizeGroupKey(key);
+  const normalizedKey = normalizekey(key);
   const rankName = String(name || '').trim();
   if (!rankName) throw new Error('Rank name cannot be empty.');
   const groups = await getGroups();
@@ -153,16 +114,16 @@ async function configureRank(key, { name, roleId, prefix }) {
   const rankmap = Array.isArray(group.rankmap) ? group.rankmap : [];
   const index = rankmap.findIndex(rank => String(rank.name || '').trim().toLowerCase() === rankName.toLowerCase());
   const mapping = index === -1 ? { name: rankName, roleid: '', prefix: '' } : { ...rankmap[index] };
-  if (roleId !== undefined) mapping.roleid = roleId ? validateRoleId(roleId) : '';
+  if (roleId !== undefined) mapping.roleid = roleId ? validaterole(roleId) : '';
   if (prefix !== undefined) mapping.prefix = String(prefix).trim();
   if (index === -1) rankmap.push(mapping);
   else rankmap[index] = mapping;
-  await writeWithRollback(`verificationBinds/groups/${normalizedKey}/rankmap`, rankmap, group.rankmap || null);
+  await databaseRequest('put', `verificationBinds/groups/${normalizedKey}/rankmap`, rankmap);
   return normalizedKey;
 }
 
 async function removeRank(key, name) {
-  const normalizedKey = normalizeGroupKey(key);
+  const normalizedKey = normalizekey(key);
   const rankName = String(name || '').trim().toLowerCase();
   const groups = await getGroups();
   const group = groups[normalizedKey];
@@ -170,12 +131,12 @@ async function removeRank(key, name) {
   const rankmap = Array.isArray(group.rankmap) ? group.rankmap : [];
   const next = rankmap.filter(rank => String(rank.name || '').trim().toLowerCase() !== rankName);
   if (next.length === rankmap.length) throw new Error(`Rank "${name}" was not found.`);
-  await writeWithRollback(`verificationBinds/groups/${normalizedKey}/rankmap`, next, rankmap);
+  await databaseRequest('put', `verificationBinds/groups/${normalizedKey}/rankmap`, next);
   return normalizedKey;
 }
 
 async function configureDepartment(key, { name, roleId, prefix }) {
-  const normalizedKey = normalizeGroupKey(key);
+  const normalizedKey = normalizekey(key);
   const departmentName = String(name || '').trim();
   if (!departmentName) throw new Error('Department name cannot be empty.');
   const groups = await getGroups();
@@ -188,17 +149,17 @@ async function configureDepartment(key, { name, roleId, prefix }) {
   const mapping = index === -1
     ? { name: departmentName, roleid: '', prefix: '' }
     : { ...departments[index] };
-  if (roleId !== undefined) mapping.roleid = roleId ? validateRoleId(roleId) : '';
+  if (roleId !== undefined) mapping.roleid = roleId ? validaterole(roleId) : '';
   if (prefix !== undefined) mapping.prefix = String(prefix).trim();
   if (!mapping.roleid) throw new Error('A Discord role is required for a department mapping.');
   if (index === -1) departments.push(mapping);
   else departments[index] = mapping;
-  await writeWithRollback(`verificationBinds/groups/${normalizedKey}/departmentmap`, departments, group.departmentmap || null);
+  await databaseRequest('put', `verificationBinds/groups/${normalizedKey}/departmentmap`, departments);
   return normalizedKey;
 }
 
 async function removeDepartment(key, name) {
-  const normalizedKey = normalizeGroupKey(key);
+  const normalizedKey = normalizekey(key);
   const departmentName = String(name || '').trim().toLowerCase();
   const groups = await getGroups();
   const group = groups[normalizedKey];
@@ -208,20 +169,8 @@ async function removeDepartment(key, name) {
     String(department.name || '').trim().toLowerCase() !== departmentName
   );
   if (next.length === departments.length) throw new Error(`Department "${name}" was not found.`);
-  await writeWithRollback(`verificationBinds/groups/${normalizedKey}/departmentmap`, next, departments);
+  await databaseRequest('put', `verificationBinds/groups/${normalizedKey}/departmentmap`, next);
   return normalizedKey;
 }
 
-module.exports = {
-  getGroups,
-  addGroup,
-  configureGroup,
-  removeGroup,
-  addBaseRole,
-  removeBaseRole,
-  configureRank,
-  removeRank,
-  configureDepartment,
-  removeDepartment,
-  normalizeGroupKey
-};
+module.exports = { getGroups, addGroup, configureGroup, removeGroup, addBaseRole, removeBaseRole, configureRank, removeRank, configureDepartment, removeDepartment, normalizekey };
