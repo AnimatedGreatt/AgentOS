@@ -3,6 +3,7 @@ const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType 
 const config = require("../config");
 const arrestStore = require('./arrestStore');
 const verificationStore = require('./verification/verificationStore');
+const verificationAudit = require('./verification/auditLog');
 const { syncmember } = require('./verification/rankSync');
 const axios = require('axios');
 const { findActiveAosByUsername } = require('./aos/aosForumLookup');
@@ -1217,6 +1218,22 @@ else {
         }));
       }
 
+      const previousBindings = await verificationStore.getConflictingBindings(
+        robloxUsername || challenge.roblox_username,
+        robloxId,
+        challenge.discord_id
+      );
+      const auditMessage = await verificationAudit.send(
+        client,
+        previousBindings.length ? 'Roblox Account Relinked' : 'Roblox Account Linked',
+        `Verifier: <@${challenge.discord_id}> (ID: ${challenge.discord_id})\n` +
+        `Roblox: **${robloxUsername || challenge.roblox_username}** (\`${robloxId}\`)` +
+        (previousBindings.length
+          ? `\nReplaced binding(s): ${previousBindings.map(binding =>
+            `<@${binding.discord_id}> (ID: ${binding.discord_id}) → **${binding.roblox_username}** (\`${binding.roblox_userid || 'unknown'}\`)`
+          ).join('; ')}`
+          : '')
+      );
       let verification;
       try {
         verification = await verificationStore.addVerification(
@@ -1225,6 +1242,11 @@ else {
           challenge.discord_id
         );
       } catch (err) {
+        try {
+          await verificationAudit.remove(auditMessage);
+        } catch (auditError) {
+          console.error('Failed to remove verification audit after database failure:', auditError);
+        }
         console.error('Failed to add verification record:', err);
         return res.status(500).send(buildOAuthResultPage({
           title: 'Verification failed',
@@ -1240,7 +1262,8 @@ else {
         rankSync = await syncmember(client, {
           discordId: challenge.discord_id,
           robloxUserId: robloxId,
-          robloxUsername: verification.roblox_username || robloxUsername
+          robloxUsername: verification.roblox_username || robloxUsername,
+          auditLabel: 'Verifier'
         });
       } catch (err) {
         console.error('Failed to sync Discord roles/nickname after Roblox verification:', err);

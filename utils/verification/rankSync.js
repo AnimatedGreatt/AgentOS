@@ -2,6 +2,7 @@ const axios = require('axios');
 const config = require('../../config');
 const verificationStore = require('./verificationStore');
 const bindStore = require('./bindStore');
+const auditLog = require('./auditLog');
 
 function normalize(value) {
   return String(value || '').trim().toLowerCase();
@@ -16,12 +17,6 @@ function makenick(username, rankPrefixes, departmentPrefixes) {
   const label = prefixes.length ? `[${prefixes.join(' ')}] ` : '';
   const maxlength = Math.max(0, 32 - Array.from(label).length);
   return `${label}${Array.from(String(username || '').trim()).slice(0, maxlength).join('')}`.slice(0, 32);
-}
-
-async function update(member, username, rankPrefixes = [], departmentPrefixes = []) {
-  const nickname = makenick(username, rankPrefixes, departmentPrefixes);
-  if (member.nickname !== nickname) await member.setNickname(nickname);
-  return nickname;
 }
 
 async function getgroupmemberships(robloxUserId) {
@@ -64,7 +59,7 @@ async function getdepartmentprefixes(member, membership, groupConfig) {
     .map(department => String(department.prefix).trim());
 }
 
-async function syncmember(client, { discordId, robloxUserId, robloxUsername }) {
+async function syncmember(client, { discordId, robloxUserId, robloxUsername, auditLabel = 'Updater' }) {
   const guild = await client.guilds.fetch(config.DEV_GUILD_ID);
   const member = await guild.members.fetch(discordId);
   const groups = await getgroupmemberships(robloxUserId);
@@ -122,9 +117,47 @@ async function syncmember(client, { discordId, robloxUserId, robloxUsername }) {
     addedRoles: addRoleIds,
     removedRoles: removeroles
   };
-  if (removeroles.length) await member.roles.remove(removeroles);
-  if (addRoleIds.length) await member.roles.add(addRoleIds);
-  await update(member, robloxUsername, rankPrefixes, departmentPrefixes);
+  const nicknameChanged = oldNickname !== nickname;
+  let auditMessage;
+
+  if (removeroles.length || addRoleIds.length || nicknameChanged) {
+    auditMessage = await auditLog.send(
+      client,
+      'Roblox Roles Updated',
+      [
+        `${auditLabel}: <@${discordId}> (ID: ${discordId})`,
+        `Roblox: **${robloxUsername}** (\`${robloxUserId}\`)`,
+        `Roles added: ${addRoleIds.length ? addRoleIds.map(roleId => `<@&${roleId}>`).join(', ') : 'none'}`,
+        `Roles removed: ${removeroles.length ? removeroles.map(roleId => `<@&${roleId}>`).join(', ') : 'none'}`,
+        nicknameChanged ? `Nickname: \`${oldNickname || 'none'}\` → \`${nickname}\`` : 'Nickname unchanged'
+      ].join('\n')
+    );
+  }
+
+  try {
+    if (removeroles.length) await member.roles.remove(removeroles);
+    if (addRoleIds.length) await member.roles.add(addRoleIds);
+    if (nicknameChanged) await member.setNickname(nickname);
+  } catch (error) {
+    const rollbacks = [
+      () => removeroles.length && member.roles.add(removeroles),
+      () => addRoleIds.length && member.roles.remove(addRoleIds),
+      () => nicknameChanged && member.setNickname(oldNickname)
+    ];
+    for (const rollback of rollbacks) {
+      try {
+        await rollback();
+      } catch (rollbackError) {
+        console.error('Failed to restore member roles or nickname after rank sync failed:', rollbackError);
+      }
+    }
+    try {
+      await auditLog.remove(auditMessage);
+    } catch (auditError) {
+      console.error('Failed to remove rank-sync audit after update failure:', auditError);
+    }
+    throw error;
+  }
   return result;
 }
 
@@ -153,7 +186,31 @@ async function syncdepartment(member) {
     }
   }
 
-  const nickname = await update(member, verification.roblox_username, rankPrefixes, departmentPrefixes);
+  const nickname = makenick(verification.roblox_username, rankPrefixes, departmentPrefixes);
+  if (member.nickname !== nickname) {
+    const auditMessage = await auditLog.send(
+      member.client,
+      'Roblox Nickname Updated',
+      `Updater: <@${member.id}> (ID: ${member.id})\n` +
+      `Roblox: **${verification.roblox_username}** (\`${verification.roblox_userid}\`)\n` +
+      `Nickname: \`${oldNickname || 'none'}\` → \`${nickname}\``
+    );
+    try {
+      await member.setNickname(nickname);
+    } catch (error) {
+      try {
+        await member.setNickname(oldNickname);
+      } catch (rollbackError) {
+        console.error('Failed to restore nickname after department sync failed:', rollbackError);
+      }
+      try {
+        await auditLog.remove(auditMessage);
+      } catch (auditError) {
+        console.error('Failed to remove nickname audit after sync failure:', auditError);
+      }
+      throw error;
+    }
+  }
   return { status: hasMembership ? 'updated' : 'nogroup', oldNickname, nickname };
 }
 

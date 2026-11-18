@@ -28,7 +28,8 @@ module.exports = {
       const result = await syncmember(interaction.client, {
         discordId: interaction.user.id,
         robloxUserId: verification.roblox_userid,
-        robloxUsername: verification.roblox_username
+        robloxUsername: verification.roblox_username,
+        auditLabel: 'Updater'
       });
 
       if (result.status === 'allg') {

@@ -1,5 +1,6 @@
 const axios = require('axios');
 const { pool } = require('../db/db');
+const auditLog = require('./auditLog');
 
 async function init() {
   await pool.query(
@@ -74,7 +75,7 @@ async function addVerification(robloxUsername, robloxUserId, discordId) {
 // Fetch the current Roblox username for a stored binding and update the row if the user has
 // renamed on Roblox since verifying. Returns the (possibly updated) record; on any lookup
 // failure the original record is returned unchanged.
-async function refreshUsername(record) {
+async function refreshUsername(record, client) {
   if (!record || !record.roblox_userid) return record;
   let currentName = null;
   try {
@@ -85,11 +86,21 @@ async function refreshUsername(record) {
     return record;
   }
   if (!currentName || currentName === String(record.roblox_username).toLowerCase()) return record;
+  const audit = await auditLog.send(
+    client,
+    'Roblox Username Changed',
+    `Updater: <@${record.discord_id}> (ID: ${record.discord_id})\nRoblox user: **${record.roblox_username}** (\`${record.roblox_userid}\`) → **${currentName}**`
+  );
   try {
     const updated = await addVerification(currentName, record.roblox_userid, record.discord_id);
     console.log('Verification: refreshed renamed Roblox account', { discord_id: record.discord_id, from: record.roblox_username, to: currentName });
     return updated;
   } catch (err) {
+    try {
+      await auditLog.remove(audit);
+    } catch (auditError) {
+      console.error('Failed to remove username-change audit after database failure:', auditError);
+    }
     console.warn('Verification: failed to store refreshed Roblox username', err);
     return record;
   }
@@ -111,6 +122,15 @@ async function getByRoblox(robloxUsername) {
 async function getByDiscord(discordId) {
   const res = await pool.query('SELECT roblox_username, roblox_userid, discord_id, created_at FROM bot_verifications WHERE discord_id = $1', [discordId]);
   return res.rows[0] || null;
+}
+
+async function getConflictingBindings(robloxUsername, robloxUserId, discordId) {
+  const res = await pool.query(
+    `SELECT roblox_username, roblox_userid, discord_id FROM bot_verifications
+     WHERE discord_id = $1 OR roblox_username = $2 OR ($3::text IS NOT NULL AND roblox_userid = $3)`,
+    [discordId, String(robloxUsername).toLowerCase(), robloxUserId ? String(robloxUserId) : null]
+  );
+  return res.rows;
 }
 
 async function getByRobloxId(robloxUserId) {
@@ -157,6 +177,7 @@ module.exports = {
   removeByDiscord,
   getByRoblox,
   getByDiscord,
+  getConflictingBindings,
   getByRobloxId,
   refreshUsername,
   createChallenge,

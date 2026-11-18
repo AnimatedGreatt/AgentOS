@@ -4,6 +4,7 @@ const { handleExamAuthorize } = require("../exams/handleExamAuthorize");
 const { handleExamReject } = require("../exams/handleExamReject");
 const { handleGradeButton, handleGradeModalSubmit } = require("../exams/handleExamGrade");
 const verificationStore = require('../verification/verificationStore');
+const verificationAudit = require('../verification/auditLog');
 const { syncmember } = require('../verification/rankSync');
 const axios = require('axios');
 const { handleFormReview } = require("./handleFormReview");
@@ -244,13 +245,36 @@ async function handleInteraction(interaction, client) {
           }
 
           try {
-            const v = await verificationStore.addVerification(username, robloxId, discordId);
+            const previousBindings = await verificationStore.getConflictingBindings(username, robloxId, discordId);
+            const auditMessage = await verificationAudit.send(
+              interaction.client,
+              previousBindings.length ? 'Roblox Account Relinked' : 'Roblox Account Linked',
+              `Verifier: <@${discordId}> (ID: ${discordId})\n` +
+              `Roblox: **${username}** (\`${robloxId}\`)` +
+              (previousBindings.length
+                ? `\nReplaced binding(s): ${previousBindings.map(binding =>
+                  `<@${binding.discord_id}> (ID: ${binding.discord_id}) → **${binding.roblox_username}** (\`${binding.roblox_userid || 'unknown'}\`)`
+                ).join('; ')}`
+                : '')
+            );
+            let v;
+            try {
+              v = await verificationStore.addVerification(username, robloxId, discordId);
+            } catch (error) {
+              try {
+                await verificationAudit.remove(auditMessage);
+              } catch (auditError) {
+                console.error('Failed to remove verification audit after database failure:', auditError);
+              }
+              throw error;
+            }
             await verificationStore.clearChallenge(username, discordId);
             try {
               await syncmember(interaction.client, {
                 discordId,
                 robloxUserId: robloxId,
-                robloxUsername: v.roblox_username
+                robloxUsername: v.roblox_username,
+                auditLabel: 'Verifier'
               });
             } catch (syncError) {
               console.error('Failed to sync roles after profile code verification:', syncError);

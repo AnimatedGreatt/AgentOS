@@ -148,7 +148,7 @@ module.exports = {
         let username = String(verification.roblox_username).trim();
         let rowIndex = findRowIndex(rows, 0, username);
         if (rowIndex === -1) {
-          const refreshed = await refreshUsername(verification).catch(() => verification);
+          const refreshed = await refreshUsername(verification, interaction.client).catch(() => verification);
           const refreshedUsername = String((refreshed && refreshed.roblox_username) || '').trim();
           if (refreshedUsername && refreshedUsername.toLowerCase() !== username.toLowerCase()) {
             username = refreshedUsername;

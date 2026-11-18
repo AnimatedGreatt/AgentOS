@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, ActionRowBuilder, ContainerBuilder, MessageFlags, ModalBuilder, StringSelectMenuBuilder, TextDisplayBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const bindStore = require('../utils/verification/bindStore');
+const auditLog = require('../utils/verification/auditLog');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -239,11 +240,29 @@ async function handleModal(interaction) {
     flags: MessageFlags.Ephemeral
   });
 
+  let auditMessage;
   try {
-    const message = await applyAction(action, getFields(interaction, action));
+    const values = getFields(interaction, action);
+    const auditDetails = [
+      `Updater: <@${interaction.user.id}> (ID: ${interaction.user.id})`,
+      `Action: ${Options.find(option => option.value === action)?.label || action}`,
+      ...Object.entries(values)
+        .filter(([, value]) => value)
+        .map(([field, value]) => `${field}: ${value}`)
+    ].join('\n');
+    auditMessage = await auditLog.send(interaction.client, 'Bind Settings Changed', auditDetails);
+
+    const message = await applyAction(action, values);
     await interaction.editReply({ content: message });
   } catch (error) {
     console.error(`configurebinds ${action} failed:`, error);
+    if (auditMessage) {
+      try {
+        await auditLog.remove(auditMessage);
+      } catch (auditError) {
+        console.error('Failed to remove bind audit after configuration failure:', auditError);
+      }
+    }
     await interaction.editReply({
       content: 'An error occurred while configuring binds. Contact the Department of Engineering.'
     });

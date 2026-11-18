@@ -211,7 +211,7 @@ async function handleTimeWebhookMessage(message) {
                 const robloxId = lookup.data && lookup.data.data && lookup.data.data[0] ? lookup.data.data[0].id : null;
                 if (robloxId) {
                   v = await verificationStore.getByRobloxId(robloxId);
-                  if (v) v = await verificationStore.refreshUsername(v);
+                  if (v) v = await verificationStore.refreshUsername(v, message.client);
                 }
               } catch (e) { console.warn('Roblox id fallback lookup failed:', e?.response?.status || e.message || e); }
             }

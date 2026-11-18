@@ -164,7 +164,7 @@ module.exports = {
 
         // The stored username may be stale if the user renamed on Roblox after verifying
         if (foundIdx === -1) {
-          const refreshed = await refreshUsername(verification).catch(() => verification);
+          const refreshed = await refreshUsername(verification, interaction.client).catch(() => verification);
           const refreshedName = String((refreshed && refreshed.roblox_username) || '').trim();
           if (refreshedName && refreshedName.toLowerCase() !== username.toLowerCase()) {
             username = refreshedName;
