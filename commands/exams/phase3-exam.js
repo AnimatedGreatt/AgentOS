@@ -4,9 +4,9 @@ const verificationStore = require('../../utils/verification/verificationStore');
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName('phase4-exam')
+    .setName('phase3-exam')
     .setDMPermission(false)
-    .setDescription('Request the Phase 4 Master Examination'),
+    .setDescription('Request the Phase 3 Master Examination'),
     
   async execute(interaction) {
     await interaction.deferReply({ ephemeral: true });
@@ -39,13 +39,13 @@ module.exports = {
     }
 
     const embed = new EmbedBuilder()
-      .setTitle('Request — Phase 4 Master Examination')
+      .setTitle('Request — Phase 3 Master Examination')
       .setColor(config.EMBED_COLOR)
-      .addFields({ name: 'Candidate', value: `<@${interaction.user.id}>`, inline: true }, { name: 'Exam', value: 'Phase 4 Master Examination', inline: true })
+      .addFields({ name: 'Candidate', value: `<@${interaction.user.id}>`, inline: true }, { name: 'Exam', value: 'Phase 3 Master Examination', inline: true })
       .setTimestamp(new Date());
 
-    const approve = new ButtonBuilder().setCustomId(`exam_authorize:${interaction.user.id}:phase4`).setLabel('Authorize & Start').setStyle(ButtonStyle.Success);
-    const reject = new ButtonBuilder().setCustomId(`exam_reject:${interaction.user.id}:phase4`).setLabel('Reject').setStyle(ButtonStyle.Danger);
+    const approve = new ButtonBuilder().setCustomId(`exam_authorize:${interaction.user.id}:phase3`).setLabel('Authorize & Start').setStyle(ButtonStyle.Success);
+    const reject = new ButtonBuilder().setCustomId(`exam_reject:${interaction.user.id}:phase3`).setLabel('Reject').setStyle(ButtonStyle.Danger);
     const row = new ActionRowBuilder().addComponents(approve, reject);
 
     const chan = await interaction.client.channels.fetch(config.EXAM_AUTH_CHANNEL_ID).catch(() => null);
