@@ -35,7 +35,7 @@
       "choices": [
         "A) Officers regardless of division",
         "B) Divisional personnel regardless of rank",
-        "C) Officers of divisions",
+        "C) XP Team Personnel",
         "D) Everyone"
       ],
       "correctAnswer": "AB"
@@ -377,12 +377,6 @@
       "type": "section",
       "title": "4. Final examination section",
       "description": "You are now given more scenarios. This is to test your capabilities on doing investigations. Once again, explain in the best way possible on what you would do."
-    },
-    {
-      "text": "An Agent:\n\nUses a taser on a violent off-worlder\nDuring combat\nWithout authorization\n\nIs this justified? Explain fully.",
-      "type": "text",
-      "maxScore": 15,
-      "correctAnswer": ""
     },
     {
       "text": "An Agent:\n\nUses a taser on a violent off-worlder\nDuring combat\nWithout authorization\n\nIs this justified? Explain fully.",
