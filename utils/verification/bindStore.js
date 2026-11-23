@@ -38,15 +38,17 @@ async function getGroups() {
   return (await databaseRequest('get', 'verificationBinds/groups')) || {};
 }
 
-async function addGroup({ key, groupId, prefixes = false }) {
+async function addGroup({ key, groupId, prefixes = false, departments = true }) {
   const normalizedKey = normalizekey(key);
   const groups = await getGroups();
   if (groups[normalizedKey]) throw new Error(`Group "${normalizedKey}" is already configured.`);
   await databaseRequest('put', `verificationBinds/groups/${normalizedKey}`, {
     groupid: validategroup(groupId),
     prefixes: Boolean(prefixes),
+    departments: Boolean(departments),
     baseroles: [],
-    rankmap: []
+    rankmap: [],
+    departmentmap: []
   });
   return normalizedKey;
 }
@@ -58,6 +60,7 @@ async function configureGroup(key, changes) {
   const updates = {};
   if (changes.groupId !== undefined) updates.groupid = validategroup(changes.groupId);
   if (changes.prefixes !== undefined) updates.prefixes = Boolean(changes.prefixes);
+  if (changes.departments !== undefined) updates.departments = Boolean(changes.departments);
   if (changes.departmentRank !== undefined) updates.departmentnickname = String(changes.departmentRank).trim();
   if (!Object.keys(updates).length) throw new Error('No group settings were provided.');
   await databaseRequest('patch', `verificationBinds/groups/${normalizedKey}`, updates);
@@ -71,6 +74,16 @@ async function removeGroup(key) {
   const removed = groups[normalizedKey];
   await databaseRequest('delete', `verificationBinds/groups/${normalizedKey}`);
   return { key: normalizedKey, group: removed };
+}
+
+async function restoreGroup(key, group) {
+  const normalizedKey = normalizekey(key);
+  const path = `verificationBinds/groups/${normalizedKey}`;
+  if (group === null || group === undefined) {
+    await databaseRequest('delete', path);
+    return;
+  }
+  await databaseRequest('put', path, group);
 }
 
 async function addBaseRole(key, roleId) {
@@ -173,4 +186,4 @@ async function removeDepartment(key, name) {
   return normalizedKey;
 }
 
-module.exports = { getGroups, addGroup, configureGroup, removeGroup, addBaseRole, removeBaseRole, configureRank, removeRank, configureDepartment, removeDepartment, normalizekey };
+module.exports = { getGroups, addGroup, configureGroup, removeGroup, restoreGroup, addBaseRole, removeBaseRole, configureRank, removeRank, configureDepartment, removeDepartment, normalizekey };

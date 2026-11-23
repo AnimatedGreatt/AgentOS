@@ -38,6 +38,7 @@ function findrankmapping(groupConfig, rankName) {
 }
 
 async function getdepartmentprefixes(member, membership, groupConfig) {
+  if (groupConfig.departments === false) return [];
   const departments = Array.isArray(groupConfig.departmentmap)
     ? groupConfig.departmentmap.filter(department =>
       roleidvalidation(department.roleid) && String(department.prefix || '').trim()
